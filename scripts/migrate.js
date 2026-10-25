@@ -1,6 +1,7 @@
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 function getDatabaseUrl() {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
@@ -14,11 +15,16 @@ function getDatabaseUrl() {
       }
     }
   }
-  return 'postgresql://neondb_owner:npg_iabStVkHd71T@ep-blue-sunset-b5mp00gl-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require';
+  return null;
 }
 
 async function runMigration() {
   const connectionString = getDatabaseUrl();
+  if (!connectionString) {
+    console.error('Error: DATABASE_URL not found.');
+    process.exit(1);
+  }
+
   console.log('Connecting to Neon PostgreSQL database...');
 
   const client = new Client({
@@ -30,7 +36,38 @@ async function runMigration() {
     await client.connect();
     console.log('Connected to Neon PostgreSQL successfully!');
 
-    // Create students table
+    // Ensure pgcrypto extension for gen_random_uuid
+    await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto";');
+
+    // 1. Ensure users table exists
+    console.log('Ensuring users table exists...');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        username VARCHAR(100) UNIQUE,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        full_name VARCHAR(255) NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'admin',
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Seed default admin accounts (password: admin123)
+    const adminHash = bcrypt.hashSync('admin123', 10);
+    await client.query(`
+      INSERT INTO users (username, email, password_hash, full_name, role)
+      VALUES 
+        ('admin', 'admin@admissions.edu', $1, 'System Administrator', 'admin'),
+        ('carab', 'carab6060@gmail.com', $1, 'carab', 'admin'),
+        ('superadmin', 'superadmin@admissions.edu', $1, 'Super Administrator', 'superadmin')
+      ON CONFLICT (username) DO NOTHING;
+    `, [adminHash]);
+    console.log('Admin accounts verified in users table.');
+
+    // 2. Ensure students table exists
     console.log('Ensuring students table exists...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS students (
@@ -60,7 +97,7 @@ async function runMigration() {
       CREATE INDEX IF NOT EXISTS idx_students_created ON students(created_at DESC);
     `);
 
-    // Check if we have any seed students
+    // Seed students if table is empty
     const countRes = await client.query('SELECT count(*) FROM students');
     const count = parseInt(countRes.rows[0].count, 10);
     console.log(`Current students in database: ${count}`);
@@ -82,7 +119,7 @@ async function runMigration() {
           previous_school: 'Mogadishu Primary School',
           admission_date: '2026-10-15',
           status: 'Approved',
-          notes: 'High academic performance in previous school entrance test.'
+          notes: 'High academic performance in entrance test.'
         },
         {
           student_id: 'STU-2026-0002',
@@ -130,7 +167,7 @@ async function runMigration() {
           previous_school: 'Al-Hikma Academy',
           admission_date: '2026-10-24',
           status: 'Pending',
-          notes: 'Application submitted recently. Pending principal interview.'
+          notes: 'Application submitted recently. Pending interview.'
         },
         {
           student_id: 'STU-2026-0005',
@@ -146,7 +183,7 @@ async function runMigration() {
           previous_school: 'Global Somali School',
           admission_date: '2026-10-10',
           status: 'Rejected',
-          notes: 'Capacity for Grade 7 reached; family advised to reapply next term.'
+          notes: 'Capacity for Grade 7 reached.'
         }
       ];
 
@@ -164,7 +201,7 @@ async function runMigration() {
           s.grade_applying, s.previous_school, s.admission_date, s.status, s.notes
         ]);
       }
-      console.log('Seeded 5 sample students.');
+      console.log('Seeded initial students successfully.');
     }
 
     const finalCount = await client.query('SELECT count(*) FROM students');
