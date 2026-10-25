@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import PrintModal, { StudentRecord } from '@/components/PrintModal';
@@ -26,17 +26,17 @@ export default function StudentRegistrationPage() {
 
   const [form, setForm] = useState({
     ...initialFormData,
-    company_id: activeCompany?.id || companies[0]?.id || '',
+    company_id: activeCompany?.id || (companies.length > 0 ? companies[0].id : ''),
   });
 
   // Keep company_id updated if activeCompany changes initially
   useEffect(() => {
-    if (activeCompany && !form.company_id) {
+    if (activeCompany && (!form.company_id || form.company_id === 'All')) {
       setForm((prev) => ({ ...prev, company_id: activeCompany.id }));
     } else if (companies.length > 0 && !form.company_id) {
       setForm((prev) => ({ ...prev, company_id: companies[0].id }));
     }
-  }, [activeCompany, companies]);
+  }, [activeCompany, companies, form.company_id]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [calculatedAge, setCalculatedAge] = useState<number | null>(null);
@@ -167,6 +167,7 @@ export default function StudentRegistrationPage() {
                 className="input-field font-semibold text-blue-700"
                 required
               >
+                {companies.length === 0 && <option value="">Loading institutions...</option>}
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.code}) - {c.address || 'Main Campus'}
