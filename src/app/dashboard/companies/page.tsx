@@ -173,6 +173,34 @@ export default function CompaniesPage() {
   const totalRevenue = companies.reduce((acc, c) => acc + (c.total_revenue || 0), 0);
   const activeCount = companies.filter((c) => c.is_active).length;
 
+  const isSuperAdmin = Boolean(
+    user && (
+      user.role?.toLowerCase()?.trim() === 'superadmin' || 
+      user.username?.toLowerCase()?.trim() === 'superadmin' || 
+      user.username?.toLowerCase()?.trim() === 'carab'
+    )
+  );
+
+  if (!loadingCompanies && user && !isSuperAdmin) {
+    return (
+      <div className="max-w-2xl mx-auto my-16 p-8 bg-white rounded-2xl border border-red-100 shadow-sm text-center">
+        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto text-3xl mb-4 font-bold shadow-inner">
+          🚫
+        </div>
+        <h2 className="text-xl font-bold text-slate-900">Access Denied (Super Admin Only)</h2>
+        <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
+          Qeybta <strong>Companies / Schools</strong> waxaa arki kara oo kaliya wax ka beddeli kara <strong>Super Administrator</strong>.
+        </p>
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="btn-primary text-xs mt-6 px-5 py-2.5 shadow-md"
+        >
+          Ku noqo Dashboard-ka
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       {/* Header Banner */}

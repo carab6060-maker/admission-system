@@ -24,6 +24,14 @@ export default function Sidebar({
   const displayName = user?.username || user?.fullName?.split(' ')[0] || 'carab';
   const roleName = user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Admin';
 
+  const isSuperAdmin = Boolean(
+    user && (
+      user.role?.toLowerCase()?.trim() === 'superadmin' || 
+      user.username?.toLowerCase()?.trim() === 'superadmin' || 
+      user.username?.toLowerCase()?.trim() === 'carab'
+    )
+  );
+
   const navItems = [
     {
       href: '/dashboard',
@@ -79,7 +87,7 @@ export default function Sidebar({
         </svg>
       ),
     },
-    ...(user?.role === 'superadmin'
+    ...(isSuperAdmin
       ? [
           {
             href: '/dashboard/companies',
