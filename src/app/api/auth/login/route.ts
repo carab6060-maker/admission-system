@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
         email: user.email,
         fullName: user.full_name,
         role: user.role,
+        companyId: user.company_id || null,
       },
     });
 

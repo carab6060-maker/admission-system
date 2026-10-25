@@ -8,6 +8,7 @@ export interface User {
   username?: string;
   fullName: string;
   role: string;
+  companyId?: string | null;
 }
 
 interface AuthContextType {
@@ -80,6 +81,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         setUser(data.user);
         localStorage.setItem('admission-user', JSON.stringify(data.user));
+        if (data.user?.companyId) {
+          localStorage.setItem('admission-active-company-id', data.user.companyId);
+        }
         return { success: true };
       } else {
         return { success: false, error: data.error || 'Invalid credentials' };

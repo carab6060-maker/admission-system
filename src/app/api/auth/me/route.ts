@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const res = await query(
-      `SELECT id, username, email, full_name, role FROM users WHERE id = $1 LIMIT 1`,
+      `SELECT id, username, email, full_name, role, company_id FROM users WHERE id = $1 LIMIT 1`,
       [payload.userId]
     );
 
@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
           email: u.email,
           fullName: u.full_name,
           role: u.role,
+          companyId: u.company_id || null,
         },
       });
     }
