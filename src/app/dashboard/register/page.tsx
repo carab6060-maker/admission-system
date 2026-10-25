@@ -15,7 +15,6 @@ const initialFormData = {
   email: '',
   address: '',
   photo_url: '',
-  status: 'Pending',
 };
 
 export default function StudentRegistrationPage() {
@@ -120,7 +119,7 @@ export default function StudentRegistrationPage() {
             Student Admission Form
           </h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            Fill in student biographical details and admission status
+            Fill in student biographical details and contact information
           </p>
         </div>
 
@@ -261,9 +260,9 @@ export default function StudentRegistrationPage() {
             </div>
 
             {/* Photo URL */}
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
-                Photo URL <span className="text-slate-400 font-normal">(Optional)</span>
+                Photo URL <span className="text-slate-400 font-normal">(Optional image link)</span>
               </label>
               <input
                 type="url"
@@ -272,22 +271,6 @@ export default function StudentRegistrationPage() {
                 placeholder="https://example.com/photo.jpg"
                 className="input-field"
               />
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
-                Admission Status
-              </label>
-              <select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="input-field font-semibold text-blue-700"
-              >
-                <option value="Pending">Pending Review</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-              </select>
             </div>
 
             {/* Address */}

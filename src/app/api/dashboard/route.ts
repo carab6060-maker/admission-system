@@ -8,14 +8,11 @@ export async function GET() {
     const totalRes = await query(`SELECT COUNT(*) as count FROM students`);
     const totalStudents = parseInt(totalRes.rows[0].count, 10);
 
-    const approvedRes = await query(`SELECT COUNT(*) as count FROM students WHERE status = 'Approved'`);
-    const approvedApplications = parseInt(approvedRes.rows[0].count, 10);
+    const maleRes = await query(`SELECT COUNT(*) as count FROM students WHERE LOWER(gender) = 'male'`);
+    const maleStudents = parseInt(maleRes.rows[0].count, 10);
 
-    const pendingRes = await query(`SELECT COUNT(*) as count FROM students WHERE status = 'Pending'`);
-    const pendingApplications = parseInt(pendingRes.rows[0].count, 10);
-
-    const rejectedRes = await query(`SELECT COUNT(*) as count FROM students WHERE status = 'Rejected'`);
-    const rejectedApplications = parseInt(rejectedRes.rows[0].count, 10);
+    const femaleRes = await query(`SELECT COUNT(*) as count FROM students WHERE LOWER(gender) = 'female'`);
+    const femaleStudents = parseInt(femaleRes.rows[0].count, 10);
 
     const newAdmissionsRes = await query(
       `SELECT COUNT(*) as count FROM students 
@@ -25,7 +22,7 @@ export async function GET() {
 
     // Recent Student Registrations
     const recentRes = await query(
-      `SELECT id, first_name, middle_name, last_name, gender, date_of_birth, phone, email, address, status, created_at 
+      `SELECT id, first_name, middle_name, last_name, gender, date_of_birth, phone, email, address, photo_url, created_at 
        FROM students 
        ORDER BY created_at DESC 
        LIMIT 6`
@@ -36,9 +33,8 @@ export async function GET() {
       stats: {
         totalStudents,
         newAdmissions,
-        approvedApplications,
-        pendingApplications,
-        rejectedApplications,
+        maleStudents,
+        femaleStudents,
       },
       recentStudents: recentRes.rows,
     });

@@ -59,8 +59,8 @@ async function runMigration() {
       ON CONFLICT (username) DO NOTHING;
     `, [adminHash]);
 
-    // 2. Recreate students table without parent, student_id, and academic record
-    console.log('Migrating students table to new streamlined schema...');
+    // 2. Students table without status
+    console.log('Migrating students table to remove status...');
     await client.query(`DROP TABLE IF EXISTS students CASCADE;`);
 
     await client.query(`
@@ -75,17 +75,15 @@ async function runMigration() {
         email VARCHAR(255),
         address TEXT NOT NULL,
         photo_url TEXT,
-        status VARCHAR(30) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Rejected')),
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE INDEX idx_students_status ON students(status);
       CREATE INDEX idx_students_created ON students(created_at DESC);
       CREATE INDEX idx_students_names ON students(first_name, last_name);
     `);
 
-    console.log('Seeding initial student records...');
+    console.log('Seeding student records without status...');
     const seedStudents = [
       {
         first_name: 'Amina',
@@ -95,8 +93,7 @@ async function runMigration() {
         date_of_birth: '2012-04-15',
         phone: '+252 61 5123456',
         email: 'amina.hassan@example.com',
-        address: 'Hodan District, Mogadishu',
-        status: 'Approved'
+        address: 'Hodan District, Mogadishu'
       },
       {
         first_name: 'Liban',
@@ -106,8 +103,7 @@ async function runMigration() {
         date_of_birth: '2010-08-22',
         phone: '+252 61 5234567',
         email: 'liban.jama@example.com',
-        address: 'Wadajir, Airport Road, Mogadishu',
-        status: 'Approved'
+        address: 'Wadajir, Airport Road, Mogadishu'
       },
       {
         first_name: 'Safia',
@@ -117,8 +113,7 @@ async function runMigration() {
         date_of_birth: '2014-01-10',
         phone: '+252 61 5345678',
         email: 'safia.nur@example.com',
-        address: 'Hamar Weyne, Ocean View, Mogadishu',
-        status: 'Pending'
+        address: 'Hamar Weyne, Ocean View, Mogadishu'
       },
       {
         first_name: 'Khadar',
@@ -128,8 +123,7 @@ async function runMigration() {
         date_of_birth: '2011-11-05',
         phone: '+252 61 5456789',
         email: 'khadar.shire@example.com',
-        address: 'Yaqshid, General Daud St, Mogadishu',
-        status: 'Pending'
+        address: 'Yaqshid, General Daud St, Mogadishu'
       },
       {
         first_name: 'Maryan',
@@ -139,8 +133,7 @@ async function runMigration() {
         date_of_birth: '2013-06-30',
         phone: '+252 61 5567890',
         email: 'maryan.omar@example.com',
-        address: 'Hawl Wadag, Bakara Area, Mogadishu',
-        status: 'Rejected'
+        address: 'Hawl Wadag, Bakara Area, Mogadishu'
       }
     ];
 
@@ -148,16 +141,16 @@ async function runMigration() {
       await client.query(`
         INSERT INTO students (
           first_name, middle_name, last_name, gender, date_of_birth,
-          phone, email, address, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+          phone, email, address
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
       `, [
         s.first_name, s.middle_name, s.last_name, s.gender, s.date_of_birth,
-        s.phone, s.email, s.address, s.status
+        s.phone, s.email, s.address
       ]);
     }
 
     const finalCount = await client.query('SELECT count(*) FROM students');
-    console.log(`Students table migrated and ready with ${finalCount.rows[0].count} students.`);
+    console.log(`Database ready with ${finalCount.rows[0].count} students without status column.`);
 
   } catch (err) {
     console.error('Migration error:', err);

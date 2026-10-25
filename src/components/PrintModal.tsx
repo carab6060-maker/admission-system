@@ -14,7 +14,6 @@ export interface StudentRecord {
   email?: string | null;
   address: string;
   photo_url?: string | null;
-  status: string;
   created_at: string;
 }
 
@@ -99,17 +98,9 @@ export default function PrintModal({ isOpen, onClose, student }: PrintModalProps
             </div>
 
             <div className="text-right">
-              <div
-                className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                  student.status === 'Approved'
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                    : student.status === 'Rejected'
-                    ? 'bg-red-100 text-red-800 border border-red-300'
-                    : 'bg-amber-100 text-amber-800 border border-amber-300'
-                }`}
-              >
-                {student.status}
-              </div>
+              <span className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-200">
+                Registered Student
+              </span>
               <p className="text-[11px] text-slate-500 mt-1">
                 Issued: {new Date().toLocaleDateString()}
               </p>

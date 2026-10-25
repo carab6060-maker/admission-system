@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/Toast';
@@ -10,7 +10,6 @@ import PrintModal, { StudentRecord } from '@/components/PrintModal';
 
 export default function StudentsPage() {
   const searchParams = useSearchParams();
-  const initialStatusParam = searchParams.get('status') || 'All';
   const initialSearchParam = searchParams.get('search') || '';
 
   const { showToast } = useToast();
@@ -18,7 +17,7 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(initialSearchParam);
-  const [selectedStatus, setSelectedStatus] = useState(initialStatusParam);
+  const [selectedGender, setSelectedGender] = useState<'All' | 'Male' | 'Female'>('All');
 
   // Modals state
   const [viewStudent, setViewStudent] = useState<StudentRecord | null>(null);
@@ -31,13 +30,12 @@ export default function StudentsPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Fetch students with search & status filter
+  // Fetch students with search
   const fetchStudents = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       if (search.trim()) params.set('search', search.trim());
-      if (selectedStatus !== 'All') params.set('status', selectedStatus);
 
       const res = await fetch(`/api/students?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load students');
@@ -48,7 +46,7 @@ export default function StudentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, selectedStatus, showToast]);
+  }, [search, showToast]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -56,32 +54,6 @@ export default function StudentsPage() {
     }, 250);
     return () => clearTimeout(timer);
   }, [fetchStudents]);
-
-  // Quick Status Update
-  const handleStatusChange = async (student: StudentRecord, newStatus: string) => {
-    try {
-      const res = await fetch(`/api/students/${student.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!res.ok) throw new Error('Failed to update status');
-
-      setStudents((prev) =>
-        prev.map((s) => (s.id === student.id ? { ...s, status: newStatus } : s))
-      );
-
-      if (viewStudent && viewStudent.id === student.id) {
-        setViewStudent({ ...viewStudent, status: newStatus });
-      }
-
-      const name = `${student.first_name} ${student.last_name}`;
-      showToast(`Status updated to ${newStatus} for ${name}`, 'success');
-    } catch {
-      showToast('Could not update application status', 'error');
-    }
-  };
 
   // Open Edit Modal
   const openEditModal = (student: StudentRecord) => {
@@ -96,7 +68,6 @@ export default function StudentsPage() {
       email: student.email || '',
       address: student.address,
       photo_url: student.photo_url || '',
-      status: student.status,
     });
   };
 
@@ -158,9 +129,21 @@ export default function StudentsPage() {
   };
 
   const totalCount = students.length;
-  const approvedCount = students.filter((s) => s.status === 'Approved').length;
-  const pendingCount = students.filter((s) => s.status === 'Pending').length;
-  const rejectedCount = students.filter((s) => s.status === 'Rejected').length;
+  const maleCount = useMemo(
+    () => students.filter((s) => (s.gender || '').toLowerCase() === 'male').length,
+    [students]
+  );
+  const femaleCount = useMemo(
+    () => students.filter((s) => (s.gender || '').toLowerCase() === 'female').length,
+    [students]
+  );
+
+  const filteredStudents = useMemo(() => {
+    if (selectedGender === 'All') return students;
+    return students.filter(
+      (s) => (s.gender || '').toLowerCase() === selectedGender.toLowerCase()
+    );
+  }, [students, selectedGender]);
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
@@ -171,7 +154,7 @@ export default function StudentsPage() {
             Registered Students
           </h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            Manage students, review statuses, and print admission slips
+            Manage student records, view profiles, and print official slips
           </p>
         </div>
 
@@ -188,98 +171,71 @@ export default function StudentsPage() {
 
       {/* Filter and Search Bar */}
       <div className="card-base p-4 bg-white space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-          {/* Search box */}
-          <div className="sm:col-span-8 relative">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by first, middle, or last name, phone, or address..."
-              className="input-field pl-9 pr-8"
-            />
-            <svg
-              className="w-4 h-4 text-slate-400 absolute left-3 top-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth="2"
+        <div className="relative">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by first, middle, or last name, phone, email, or address..."
+            className="input-field pl-9 pr-8"
+          />
+          <svg
+            className="w-4 h-4 text-slate-400 absolute left-3 top-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth="2"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs p-0.5 rounded"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs p-0.5 rounded"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {/* Status filter dropdown */}
-          <div className="sm:col-span-4">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="input-field text-xs font-medium"
-            >
-              <option value="All">All Admission Statuses</option>
-              <option value="Pending">Pending Only</option>
-              <option value="Approved">Approved Only</option>
-              <option value="Rejected">Rejected Only</option>
-            </select>
-          </div>
+              ✕
+            </button>
+          )}
         </div>
 
-        {/* Quick status pills */}
+        {/* Quick Gender Filter Pills */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
           <div className="flex flex-wrap items-center gap-1.5">
             <button
-              onClick={() => setSelectedStatus('All')}
+              onClick={() => setSelectedGender('All')}
               className={`px-3 py-1 rounded-lg font-medium transition-colors ${
-                selectedStatus === 'All'
+                selectedGender === 'All'
                   ? 'bg-slate-900 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              All ({totalCount})
+              All Students ({totalCount})
             </button>
             <button
-              onClick={() => setSelectedStatus('Approved')}
+              onClick={() => setSelectedGender('Male')}
               className={`px-3 py-1 rounded-lg font-medium transition-colors ${
-                selectedStatus === 'Approved'
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                selectedGender === 'Male'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
               }`}
             >
-              Approved ({approvedCount})
+              Male ({maleCount})
             </button>
             <button
-              onClick={() => setSelectedStatus('Pending')}
+              onClick={() => setSelectedGender('Female')}
               className={`px-3 py-1 rounded-lg font-medium transition-colors ${
-                selectedStatus === 'Pending'
-                  ? 'bg-amber-600 text-white'
-                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                selectedGender === 'Female'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
               }`}
             >
-              Pending ({pendingCount})
-            </button>
-            <button
-              onClick={() => setSelectedStatus('Rejected')}
-              className={`px-3 py-1 rounded-lg font-medium transition-colors ${
-                selectedStatus === 'Rejected'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-red-50 text-red-700 hover:bg-red-100'
-              }`}
-            >
-              Rejected ({rejectedCount})
+              Female ({femaleCount})
             </button>
           </div>
 
           <span className="text-slate-400 font-normal">
-            Showing {students.length} record{students.length !== 1 ? 's' : ''}
+            Showing {filteredStudents.length} record{filteredStudents.length !== 1 ? 's' : ''}
           </span>
         </div>
       </div>
@@ -294,20 +250,19 @@ export default function StudentsPage() {
                 <th className="py-3 px-5">Gender</th>
                 <th className="py-3 px-5">Contact (Phone & Email)</th>
                 <th className="py-3 px-5">Address</th>
-                <th className="py-3 px-5">Status (Click to Change)</th>
                 <th className="py-3 px-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center">
+                  <td colSpan={5} className="py-12 text-center">
                     <div className="spinner mx-auto" />
                     <p className="text-xs text-slate-400 mt-2">Loading students...</p>
                   </td>
                 </tr>
-              ) : students.length > 0 ? (
-                students.map((student) => {
+              ) : filteredStudents.length > 0 ? (
+                filteredStudents.map((student) => {
                   const studentFullName = `${student.first_name} ${student.middle_name} ${student.last_name}`;
                   return (
                     <tr key={student.id} className="hover:bg-slate-50/70 transition-colors">
@@ -348,28 +303,8 @@ export default function StudentsPage() {
                       </td>
 
                       {/* Address */}
-                      <td className="py-3.5 px-5 text-xs text-slate-600 max-w-[200px] truncate" title={student.address}>
+                      <td className="py-3.5 px-5 text-xs text-slate-600 max-w-[220px] truncate" title={student.address}>
                         {student.address}
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-3.5 px-5">
-                        <select
-                          value={student.status}
-                          onChange={(e) => handleStatusChange(student, e.target.value)}
-                          className={`text-xs font-bold px-2.5 py-1 rounded-lg border cursor-pointer focus:outline-none transition-colors ${
-                            student.status === 'Approved'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                              : student.status === 'Rejected'
-                              ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100'
-                              : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
-                          }`}
-                          title="Click to update status"
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Approved">Approved</option>
-                          <option value="Rejected">Rejected</option>
-                        </select>
                       </td>
 
                       {/* Actions */}
@@ -430,7 +365,7 @@ export default function StudentsPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={5} className="py-12 text-center text-slate-400 text-sm">
                     No students found matching your search.
                   </td>
                 </tr>
@@ -472,33 +407,17 @@ export default function StudentsPage() {
                 </div>
               </div>
 
-              {/* Status Switcher */}
-              <div className="flex flex-col items-start sm:items-end gap-1">
-                <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                  Status
+              <div className="flex items-center gap-2">
+                <span className="text-xs px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 font-semibold border border-blue-200">
+                  {viewStudent.gender}
                 </span>
-                <select
-                  value={viewStudent.status}
-                  onChange={(e) => handleStatusChange(viewStudent, e.target.value)}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-lg border cursor-pointer ${
-                    viewStudent.status === 'Approved'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                      : viewStudent.status === 'Rejected'
-                      ? 'bg-red-50 text-red-700 border-red-300'
-                      : 'bg-amber-50 text-amber-700 border-amber-300'
-                  }`}
-                >
-                  <option value="Pending">Pending Review</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Rejected">Rejected</option>
-                </select>
               </div>
             </div>
 
             {/* Information Grid */}
             <div className="p-4 rounded-xl border border-slate-200 space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2">
-                Biographical & Contact Information
+                Student Profile & Contact Information
               </h4>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
@@ -524,11 +443,11 @@ export default function StudentsPage() {
                   </p>
                 </div>
                 <div>
-                  <span className="text-slate-400">Phone:</span>
+                  <span className="text-slate-400">Phone Number:</span>
                   <p className="font-semibold text-slate-800 mt-0.5">{viewStudent.phone}</p>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-slate-400">Email:</span>
+                  <span className="text-slate-400">Email Address:</span>
                   <p className="font-semibold text-slate-800 mt-0.5">{viewStudent.email || 'None'}</p>
                 </div>
                 <div className="col-span-2">
@@ -671,7 +590,7 @@ export default function StudentsPage() {
                 />
               </div>
 
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-3">
                 <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">
                   Email (Optional)
                 </label>
@@ -681,21 +600,6 @@ export default function StudentsPage() {
                   onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                   className="input-field"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">
-                  Status
-                </label>
-                <select
-                  value={editForm.status || 'Pending'}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  className="input-field font-semibold text-blue-600"
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Rejected">Rejected</option>
-                </select>
               </div>
 
               <div className="sm:col-span-3">

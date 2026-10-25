@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,9 +20,6 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-
-  // Collapsible accordion section: opened only on user click, never automatically!
-  const [reportsOpen, setReportsOpen] = useState(false);
 
   const displayName = user?.username || user?.fullName?.split(' ')[0] || 'carab';
   const roleName = user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Admin';
@@ -126,57 +123,6 @@ export default function Sidebar({
               </Link>
             );
           })}
-
-          {/* Collapsible Status Categories section - opens ONLY when clicked */}
-          {!collapsed && (
-            <div className="pt-3">
-              <button
-                type="button"
-                onClick={() => setReportsOpen(!reportsOpen)}
-                className="w-full flex items-center justify-between px-3.5 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 uppercase tracking-wider rounded-lg hover:bg-white/5 transition-colors"
-              >
-                <span>Status Views</span>
-                <svg
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${reportsOpen ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {reportsOpen && (
-                <div className="mt-1 pl-2 space-y-1 animate-fadeIn">
-                  <Link
-                    href="/dashboard/students?status=Approved"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span>Approved Students</span>
-                  </Link>
-                  <Link
-                    href="/dashboard/students?status=Pending"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
-                    <span>Pending Applications</span>
-                  </Link>
-                  <Link
-                    href="/dashboard/students?status=Rejected"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-red-400" />
-                    <span>Rejected Applications</span>
-                  </Link>
-                </div>
-              )}
-            </div>
-          )}
         </nav>
 
         {/* Footer Profile Section */}

@@ -52,7 +52,6 @@ export async function PUT(
     const email = body.email !== undefined ? body.email : current.email;
     const address = body.address !== undefined ? body.address : current.address;
     const photoUrl = body.photo_url !== undefined ? body.photo_url : current.photo_url;
-    const status = body.status !== undefined ? body.status : current.status;
 
     const res = await query(
       `UPDATE students SET
@@ -65,9 +64,8 @@ export async function PUT(
         email = $7,
         address = $8,
         photo_url = $9,
-        status = $10,
         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $11
+       WHERE id = $10
        RETURNING *`,
       [
         firstName,
@@ -79,7 +77,6 @@ export async function PUT(
         email,
         address,
         photoUrl,
-        status,
         current.id,
       ]
     );

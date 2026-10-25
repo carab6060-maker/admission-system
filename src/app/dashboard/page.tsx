@@ -9,9 +9,8 @@ interface DashboardData {
   stats: {
     totalStudents: number;
     newAdmissions: number;
-    approvedApplications: number;
-    pendingApplications: number;
-    rejectedApplications: number;
+    maleStudents: number;
+    femaleStudents: number;
   };
   recentStudents: StudentRecord[];
 }
@@ -54,9 +53,8 @@ export default function DashboardPage() {
   const stats = data?.stats || {
     totalStudents: 0,
     newAdmissions: 0,
-    approvedApplications: 0,
-    pendingApplications: 0,
-    rejectedApplications: 0,
+    maleStudents: 0,
+    femaleStudents: 0,
   };
 
   const kpis = [
@@ -81,22 +79,22 @@ export default function DashboardPage() {
       ),
     },
     {
-      label: 'APPROVED APPLICATIONS',
-      value: stats.approvedApplications,
+      label: 'MALE STUDENTS',
+      value: stats.maleStudents,
       borderClass: 'border-l-emerald-500',
       icon: (
         <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
         </svg>
       ),
     },
     {
-      label: 'PENDING APPLICATIONS',
-      value: stats.pendingApplications,
-      borderClass: 'border-l-amber-500',
+      label: 'FEMALE STUDENTS',
+      value: stats.femaleStudents,
+      borderClass: 'border-l-purple-500',
       icon: (
-        <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
       ),
     },
@@ -111,7 +109,7 @@ export default function DashboardPage() {
             Admissions Overview
           </h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            Real-time enrollment statistics and application workflow status
+            Real-time enrollment statistics and student registrations
           </p>
         </div>
 
@@ -178,7 +176,7 @@ export default function DashboardPage() {
               Recent Student Registrations
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Newly submitted student applications and current review status
+              Newly registered students in the system
             </p>
           </div>
           <Link
@@ -199,8 +197,8 @@ export default function DashboardPage() {
                 <th className="py-3 px-5">Student Name</th>
                 <th className="py-3 px-5">Gender</th>
                 <th className="py-3 px-5">Phone</th>
+                <th className="py-3 px-5">Email</th>
                 <th className="py-3 px-5">Address</th>
-                <th className="py-3 px-5">Status</th>
                 <th className="py-3 px-5 text-right">Actions</th>
               </tr>
             </thead>
@@ -222,21 +220,11 @@ export default function DashboardPage() {
                       <td className="py-3.5 px-5 text-xs text-slate-800 font-medium">
                         {student.phone}
                       </td>
+                      <td className="py-3.5 px-5 text-xs text-slate-500">
+                        {student.email || '-'}
+                      </td>
                       <td className="py-3.5 px-5 text-xs text-slate-600 max-w-[200px] truncate" title={student.address}>
                         {student.address}
-                      </td>
-                      <td className="py-3.5 px-5">
-                        <span
-                          className={`badge ${
-                            student.status === 'Approved'
-                              ? 'badge-approved'
-                              : student.status === 'Rejected'
-                              ? 'badge-rejected'
-                              : 'badge-pending'
-                          }`}
-                        >
-                          {student.status}
-                        </span>
                       </td>
                       <td className="py-3.5 px-5 text-right">
                         <div className="flex items-center justify-end gap-1.5">

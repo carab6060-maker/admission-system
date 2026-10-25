@@ -7,7 +7,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.trim() || '';
-    const status = searchParams.get('status')?.trim() || '';
 
     const conditions: string[] = [];
     const params: any[] = [];
@@ -17,11 +16,6 @@ export async function GET(request: NextRequest) {
       conditions.push(
         `(LOWER(first_name) LIKE $${params.length} OR LOWER(middle_name) LIKE $${params.length} OR LOWER(last_name) LIKE $${params.length} OR LOWER(phone) LIKE $${params.length} OR LOWER(email) LIKE $${params.length} OR LOWER(address) LIKE $${params.length})`
       );
-    }
-
-    if (status && status !== 'All') {
-      params.push(status);
-      conditions.push(`status = $${params.length}`);
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -48,7 +42,6 @@ export async function POST(request: NextRequest) {
     const address = body.address?.trim();
     const email = body.email?.trim() || null;
     const photoUrl = body.photo_url?.trim() || null;
-    const status = body.status?.trim() || 'Pending';
 
     // Field validations
     if (!firstName) return NextResponse.json({ error: 'First name is required' }, { status: 400 });
@@ -62,8 +55,8 @@ export async function POST(request: NextRequest) {
     const res = await query(
       `INSERT INTO students (
         first_name, middle_name, last_name, gender, date_of_birth,
-        phone, email, address, photo_url, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        phone, email, address, photo_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *`,
       [
         firstName,
@@ -75,7 +68,6 @@ export async function POST(request: NextRequest) {
         email,
         address,
         photoUrl,
-        status,
       ]
     );
 
