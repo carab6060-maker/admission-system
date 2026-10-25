@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { query } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await getAuthUser(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.trim().toLowerCase() || '';
     const role = searchParams.get('role')?.trim() || '';
@@ -13,6 +15,13 @@ export async function GET(request: NextRequest) {
 
     const conditions: string[] = [];
     const params: any[] = [];
+
+    // Isolation: non-superadmin only sees users of their school
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId) {
+      params.push(authUser.companyId);
+      conditions.push(`company_id::text = $${params.length}`);
+      conditions.push(`LOWER(role) != 'superadmin'`);
+    }
 
     if (search) {
       params.push(`%${search}%`);
@@ -38,17 +47,21 @@ export async function GET(request: NextRequest) {
 
     const sql = `
       SELECT 
-        id, 
-        username, 
-        email, 
-        full_name, 
-        role, 
-        is_active, 
-        created_at, 
-        updated_at 
-      FROM users 
+        u.id, 
+        u.username, 
+        u.email, 
+        u.full_name, 
+        u.role, 
+        u.is_active, 
+        u.company_id,
+        c.name as company_name,
+        c.code as company_code,
+        u.created_at, 
+        u.updated_at 
+      FROM users u
+      LEFT JOIN companies c ON u.company_id = c.id
       ${whereClause} 
-      ORDER BY created_at ASC
+      ORDER BY u.created_at ASC
     `;
 
     const result = await query(sql, params);
@@ -129,14 +142,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Email "${email}" is already registered` }, { status: 409 });
     }
 
+    const authUser = await getAuthUser(request);
+    let companyId = body.company_id || null;
+
+    if (authUser && authUser.role !== 'superadmin') {
+      if (role === 'superadmin') {
+        return NextResponse.json({ error: 'Only Super Admin can create Super Admin accounts' }, { status: 403 });
+      }
+      companyId = authUser.companyId || null;
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
 
     const insertRes = await query(
       `INSERT INTO users (
-        username, email, password_hash, full_name, role, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, username, email, full_name, role, is_active, created_at`,
-      [username, email, passwordHash, fullName, role, isActive]
+        username, email, password_hash, full_name, role, is_active, company_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, username, email, full_name, role, is_active, company_id, created_at`,
+      [username, email, passwordHash, fullName, role, isActive, companyId]
     );
 
     return NextResponse.json({

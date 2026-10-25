@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await getAuthUser(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.trim() || '';
-    const companyId = searchParams.get('company_id')?.trim() || '';
+    let companyId = searchParams.get('company_id')?.trim() || '';
+
+    // Strict Isolation: If non-superadmin, force company_id to their own school!
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId) {
+      companyId = authUser.companyId;
+    }
 
     const conditions: string[] = [];
     const params: any[] = [];
@@ -51,6 +58,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await getAuthUser(request);
     const body = await request.json();
 
     const firstName = body.first_name?.trim();
@@ -64,7 +72,10 @@ export async function POST(request: NextRequest) {
     const photoUrl = body.photo_url?.trim() || null;
 
     let companyId = body.company_id?.trim();
-    if (!companyId) {
+    // Strict isolation: Non-superadmin can ONLY register to their own school
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId) {
+      companyId = authUser.companyId;
+    } else if (!companyId) {
       const compRes = await query(`SELECT id FROM companies WHERE is_active = true ORDER BY created_at ASC LIMIT 1`);
       if (compRes.rows.length > 0) {
         companyId = compRes.rows[0].id;

@@ -9,6 +9,7 @@ export interface JWTPayload {
   role: string;
   fullName: string;
   username?: string;
+  companyId?: string | null;
 }
 
 export function signToken(payload: JWTPayload): string {
@@ -30,6 +31,12 @@ export function getTokenFromRequest(request: NextRequest): string | null {
   }
   const cookie = request.cookies.get('auth-token');
   return cookie?.value || null;
+}
+
+export async function getAuthUser(request: NextRequest): Promise<JWTPayload | null> {
+  const token = getTokenFromRequest(request);
+  if (!token) return null;
+  return verifyToken(token);
 }
 
 export function withAuth(

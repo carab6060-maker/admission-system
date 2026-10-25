@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +9,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authUser = await getAuthUser(request);
     const { id } = params;
     const res = await query(
       `SELECT s.*, c.name as company_name, c.code as company_code, c.phone as company_phone, c.address as company_address
@@ -22,7 +24,12 @@ export async function GET(
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: res.rows[0] });
+    const student = res.rows[0];
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId && student.company_id !== authUser.companyId) {
+      return NextResponse.json({ error: 'Access denied: student belongs to another school' }, { status: 403 });
+    }
+
+    return NextResponse.json({ success: true, data: student });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Failed to fetch student' }, { status: 500 });
   }
@@ -33,6 +40,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authUser = await getAuthUser(request);
     const { id } = params;
     const body = await request.json();
 
@@ -46,6 +54,10 @@ export async function PUT(
     }
 
     const current = check.rows[0];
+
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId && current.company_id !== authUser.companyId) {
+      return NextResponse.json({ error: 'Access denied: student belongs to another school' }, { status: 403 });
+    }
 
     const firstName = body.first_name !== undefined ? body.first_name : current.first_name;
     const middleName = body.middle_name !== undefined ? body.middle_name : current.middle_name;
@@ -108,7 +120,19 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authUser = await getAuthUser(request);
     const { id } = params;
+
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId) {
+      const check = await query(`SELECT company_id FROM students WHERE id::text = $1`, [id]);
+      if (check.rows.length === 0) {
+        return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+      }
+      if (check.rows[0].company_id !== authUser.companyId) {
+        return NextResponse.json({ error: 'Access denied: student belongs to another school' }, { status: 403 });
+      }
+    }
+
     const res = await query(
       `DELETE FROM students WHERE id::text = $1 RETURNING first_name, last_name`,
       [id]

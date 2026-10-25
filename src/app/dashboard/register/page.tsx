@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import PrintModal, { StudentRecord } from '@/components/PrintModal';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const initialFormData = {
   first_name: '',
@@ -21,22 +22,25 @@ const initialFormData = {
 
 export default function StudentRegistrationPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { showToast } = useToast();
   const { companies, activeCompany } = useCompany();
 
   const [form, setForm] = useState({
     ...initialFormData,
-    company_id: activeCompany?.id || (companies.length > 0 ? companies[0].id : ''),
+    company_id: user?.companyId || activeCompany?.id || (companies.length > 0 ? companies[0].id : ''),
   });
 
   // Keep company_id updated if activeCompany changes initially
   useEffect(() => {
-    if (activeCompany && (!form.company_id || form.company_id === 'All')) {
+    if (user && user.role !== 'superadmin' && user.companyId) {
+      setForm((prev) => ({ ...prev, company_id: user.companyId! }));
+    } else if (activeCompany && (!form.company_id || form.company_id === 'All')) {
       setForm((prev) => ({ ...prev, company_id: activeCompany.id }));
     } else if (companies.length > 0 && !form.company_id) {
       setForm((prev) => ({ ...prev, company_id: companies[0].id }));
     }
-  }, [activeCompany, companies, form.company_id]);
+  }, [user, activeCompany, companies, form.company_id]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [calculatedAge, setCalculatedAge] = useState<number | null>(null);
@@ -161,19 +165,27 @@ export default function StudentRegistrationPage() {
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
                 Enrolling Institution / School *
               </label>
-              <select
-                value={form.company_id}
-                onChange={(e) => setForm({ ...form, company_id: e.target.value })}
-                className="input-field font-semibold text-blue-700"
-                required
-              >
-                {companies.length === 0 && <option value="">Loading institutions...</option>}
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.code}) - {c.address || 'Main Campus'}
-                  </option>
-                ))}
-              </select>
+              {user?.role === 'superadmin' ? (
+                <select
+                  value={form.company_id}
+                  onChange={(e) => setForm({ ...form, company_id: e.target.value })}
+                  className="input-field font-semibold text-blue-700"
+                  required
+                >
+                  {companies.length === 0 && <option value="">Loading institutions...</option>}
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code}) - {c.address || 'Main Campus'}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-900 font-semibold text-sm">
+                  <span className="text-base">🏢</span>
+                  <span>{activeCompany?.name || companies[0]?.name || 'Assigned Institution'} ({activeCompany?.code || companies[0]?.code || 'CODE'})</span>
+                  <span className="text-xs font-normal text-blue-700 ml-auto">Locked to your school</span>
+                </div>
+              )}
             </div>
 
             {/* First Name */}

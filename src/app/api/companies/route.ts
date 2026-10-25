@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 import { query } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await getAuthUser(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.trim().toLowerCase() || '';
 
     const conditions: string[] = [];
     const params: any[] = [];
+
+    // Isolation: If authenticated user is NOT superadmin, only show their own school!
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId) {
+      params.push(authUser.companyId);
+      conditions.push(`c.id::text = $${params.length}`);
+    }
 
     if (search) {
       params.push(`%${search}%`);
@@ -63,6 +72,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await getAuthUser(request);
+    if (authUser && authUser.role !== 'superadmin') {
+      return NextResponse.json(
+        { error: 'Only Super Admin can register a new school/company' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
 
     const name = body.name?.trim();
@@ -73,6 +90,12 @@ export async function POST(request: NextRequest) {
     const logoUrl = body.logo_url?.trim() || null;
     const currency = body.currency?.trim() || 'USD';
     const isActive = body.is_active !== undefined ? Boolean(body.is_active) : true;
+
+    // Optional or provided School Admin credentials
+    const adminUsername = body.admin_username?.trim().toLowerCase();
+    const adminPassword = body.admin_password?.trim();
+    const adminFullName = body.admin_full_name?.trim();
+    const adminEmail = body.admin_email?.trim() || email;
 
     if (!name) {
       return NextResponse.json({ error: 'Company/Institution name is required' }, { status: 400 });
@@ -87,6 +110,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Company code "${code}" already exists` }, { status: 409 });
     }
 
+    // If admin username is provided, check username uniqueness in users table
+    if (adminUsername) {
+      const userCheck = await query(`SELECT id FROM users WHERE LOWER(username) = $1`, [adminUsername]);
+      if (userCheck.rows.length > 0) {
+        return NextResponse.json(
+          { error: `Administrator username "${adminUsername}" is already taken. Please choose another.` },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Insert Company
     const insertRes = await query(
       `INSERT INTO companies (
         name, code, phone, email, address, logo_url, currency, is_active
@@ -95,10 +130,29 @@ export async function POST(request: NextRequest) {
       [name, code, phone, email, address, logoUrl, currency, isActive]
     );
 
+    const newCompany = insertRes.rows[0];
+    let createdAdminUser = null;
+
+    // Create Dedicated School Admin Account if credentials provided
+    if (adminUsername && adminPassword) {
+      const passwordHash = await bcrypt.hash(adminPassword, 10);
+      const userFullName = adminFullName || `${name} Admin`;
+      const userEmailAddr = adminEmail || `${adminUsername}@${code.toLowerCase()}.edu`;
+
+      const userRes = await query(
+        `INSERT INTO users (username, email, password_hash, full_name, role, company_id)
+         VALUES ($1, $2, $3, $4, 'admin', $5)
+         RETURNING id, username, email, full_name, role, company_id`,
+        [adminUsername, userEmailAddr, passwordHash, userFullName, newCompany.id]
+      );
+      createdAdminUser = userRes.rows[0];
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Company "${name}" created successfully`,
-      data: insertRes.rows[0],
+      message: `School "${name}" registered successfully${createdAdminUser ? ` with dedicated admin account: @${createdAdminUser.username}` : ''}`,
+      data: newCompany,
+      adminUser: createdAdminUser,
     }, { status: 201 });
   } catch (err: any) {
     console.error('Error creating company:', err);

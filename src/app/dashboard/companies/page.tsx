@@ -1,37 +1,58 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import Modal from '@/components/Modal';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useCompany, Company } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 
+const initialCompanyForm = {
+  name: '',
+  code: '',
+  phone: '',
+  email: '',
+  address: '',
+  logo_url: '',
+  currency: 'USD',
+  is_active: true,
+  admin_full_name: '',
+  admin_username: '',
+  admin_email: '',
+  admin_password: '',
+};
+
 export default function CompaniesPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const { showToast } = useToast();
   const { companies, activeCompany, setActiveCompanyId, refreshCompanies, loadingCompanies } = useCompany();
+
+  // Strict page protection: Only Super Admin can access this page
+  useEffect(() => {
+    if (user && user.role !== 'superadmin') {
+      router.replace('/dashboard');
+    }
+  }, [user, router]);
 
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editCompany, setEditCompany] = useState<Company | null>(null);
   const [deleteCompany, setDeleteCompany] = useState<Company | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    schoolName: string;
+    username: string;
+    password?: string;
+    email?: string;
+  } | null>(null);
 
   const [savingAdd, setSavingAdd] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // Form states
-  const [form, setForm] = useState({
-    name: '',
-    code: '',
-    phone: '',
-    email: '',
-    address: '',
-    logo_url: '',
-    currency: 'USD',
-    is_active: true,
-  });
+  const [form, setForm] = useState(initialCompanyForm);
 
   const handleCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,18 +71,19 @@ export default function CompaniesPage() {
 
       const data = await res.json();
       if (res.ok) {
-        showToast(`Company "${form.name}" registered successfully!`, 'success');
+        showToast(data.message || `School "${form.name}" registered successfully!`, 'success');
         setShowAddModal(false);
-        setForm({
-          name: '',
-          code: '',
-          phone: '',
-          email: '',
-          address: '',
-          logo_url: '',
-          currency: 'USD',
-          is_active: true,
-        });
+
+        if (data.adminUser && form.admin_password) {
+          setCreatedCredentials({
+            schoolName: form.name,
+            username: data.adminUser.username,
+            password: form.admin_password,
+            email: data.adminUser.email,
+          });
+        }
+
+        setForm(initialCompanyForm);
         await refreshCompanies();
       } else {
         showToast(data.error || 'Failed to create company', 'error');
@@ -518,6 +540,77 @@ export default function CompaniesPage() {
             />
           </div>
 
+          {/* School Administrator Login Account Section */}
+          <div className="pt-3 border-t border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                👤
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                  School Admin Account (Username & Password)
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  U samee username iyo password gooni ah oo dugsigani ku galo nidaamka
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Admin Full Name
+                </label>
+                <input
+                  type="text"
+                  value={form.admin_full_name}
+                  onChange={(e) => setForm({ ...form, admin_full_name: e.target.value })}
+                  placeholder="e.g. Principal Ahmed Jama"
+                  className="input-field text-xs bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Admin Username *
+                </label>
+                <input
+                  type="text"
+                  value={form.admin_username}
+                  onChange={(e) => setForm({ ...form, admin_username: e.target.value.toLowerCase().replace(/\s+/g, '') })}
+                  placeholder="e.g. alnour_admin"
+                  className="input-field text-xs bg-white font-mono font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Admin Email
+                </label>
+                <input
+                  type="email"
+                  value={form.admin_email}
+                  onChange={(e) => setForm({ ...form, admin_email: e.target.value })}
+                  placeholder="admin@school.edu"
+                  className="input-field text-xs bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Admin Password *
+                </label>
+                <input
+                  type="text"
+                  value={form.admin_password}
+                  onChange={(e) => setForm({ ...form, admin_password: e.target.value })}
+                  placeholder="e.g. SchoolAdmin123"
+                  className="input-field text-xs bg-white font-mono font-medium"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="pt-2">
             <label className="inline-flex items-center gap-2 cursor-pointer">
               <input
@@ -686,6 +779,74 @@ export default function CompaniesPage() {
         isDestructive={true}
         loading={deleting}
       />
+
+      {/* Credentials Confirmation Modal */}
+      <Modal
+        isOpen={Boolean(createdCredentials)}
+        onClose={() => setCreatedCredentials(null)}
+        title="School Administrator Credentials"
+        size="md"
+      >
+        {createdCredentials && (
+          <div className="space-y-4 text-slate-800">
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-start gap-3">
+              <span className="text-xl">✅</span>
+              <div>
+                <h4 className="font-bold text-sm">School & Admin Created Successfully!</h4>
+                <p className="text-xs text-emerald-800 mt-0.5">
+                  Koontadan waxaa loo sameeyay shirkadda <strong>{createdCredentials.schoolName}</strong>. Waxay geli karaan nidaamka oo xogtooda oo keliya ayay arki karaan.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 text-white p-4 rounded-xl space-y-2.5 font-mono text-xs">
+              <div className="flex justify-between border-b border-slate-800 pb-2">
+                <span className="text-slate-400">School:</span>
+                <span className="text-white font-bold">{createdCredentials.schoolName}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-800 pb-2">
+                <span className="text-slate-400">Username:</span>
+                <span className="text-blue-400 font-bold">{createdCredentials.username}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-800 pb-2">
+                <span className="text-slate-400">Password:</span>
+                <span className="text-amber-400 font-bold">{createdCredentials.password}</span>
+              </div>
+              {createdCredentials.email && (
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-400">Email:</span>
+                  <span className="text-slate-300">{createdCredentials.email}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1">
+                <span className="text-slate-400">Login URL:</span>
+                <span className="text-emerald-400">/login</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const text = `School: ${createdCredentials.schoolName}\nUsername: ${createdCredentials.username}\nPassword: ${createdCredentials.password}\nLogin: http://localhost:3005/login`;
+                  navigator.clipboard.writeText(text);
+                  showToast('Credentials copied to clipboard!', 'success');
+                }}
+                className="btn-secondary text-xs flex items-center gap-1.5"
+              >
+                📋 Copy Credentials
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreatedCredentials(null)}
+                className="btn-primary text-xs"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

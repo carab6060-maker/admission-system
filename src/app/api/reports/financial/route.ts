@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await getAuthUser(request);
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || 'month';
-    const companyId = searchParams.get('company_id')?.trim() || '';
+    let companyId = searchParams.get('company_id')?.trim() || '';
     const customStart = searchParams.get('start_date');
     const customEnd = searchParams.get('end_date');
+
+    // Strict Isolation: If non-superadmin, force company_id
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId) {
+      companyId = authUser.companyId;
+    }
 
     const conditions: string[] = [];
     const params: any[] = [];

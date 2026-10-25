@@ -1,18 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await getAuthUser(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.trim() || '';
     const feeType = searchParams.get('fee_type')?.trim() || '';
     const paymentMethod = searchParams.get('payment_method')?.trim() || '';
     const studentId = searchParams.get('student_id')?.trim() || '';
-    const companyId = searchParams.get('company_id')?.trim() || '';
+    let companyId = searchParams.get('company_id')?.trim() || '';
     const startDate = searchParams.get('start_date')?.trim() || '';
     const endDate = searchParams.get('end_date')?.trim() || '';
+
+    // Strict Isolation: If non-superadmin, force their own company
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId) {
+      companyId = authUser.companyId;
+    }
 
     const conditions: string[] = [];
     const params: any[] = [];
@@ -158,6 +165,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check student existence & fetch company_id
+    const authUser = await getAuthUser(request);
     const studentCheck = await query(
       `SELECT id, first_name, middle_name, last_name, phone, company_id FROM students WHERE id::text = $1`,
       [studentId]
@@ -167,7 +175,16 @@ export async function POST(request: NextRequest) {
     }
 
     const student = studentCheck.rows[0];
-    let companyId = body.company_id?.trim() || student.company_id;
+
+    // Isolation check
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId && student.company_id !== authUser.companyId) {
+      return NextResponse.json({ error: 'Access denied: student belongs to another school' }, { status: 403 });
+    }
+
+    let companyId = authUser && authUser.role !== 'superadmin' && authUser.companyId 
+      ? authUser.companyId 
+      : (body.company_id?.trim() || student.company_id);
+
     if (!companyId) {
       const compRes = await query(`SELECT id FROM companies WHERE is_active = true ORDER BY created_at ASC LIMIT 1`);
       companyId = compRes.rows[0]?.id || null;

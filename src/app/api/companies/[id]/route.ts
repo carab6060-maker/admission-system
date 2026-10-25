@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +9,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authUser = await getAuthUser(request);
     const { id } = params;
+
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId !== id) {
+      return NextResponse.json({ error: 'Access denied to this school' }, { status: 403 });
+    }
+
     const res = await query(
       `SELECT 
         c.*,
@@ -43,6 +50,11 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authUser = await getAuthUser(request);
+    if (authUser && authUser.role !== 'superadmin') {
+      return NextResponse.json({ error: 'Only Super Admin can update school details' }, { status: 403 });
+    }
+
     const { id } = params;
     const body = await request.json();
 
@@ -108,6 +120,11 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authUser = await getAuthUser(request);
+    if (authUser && authUser.role !== 'superadmin') {
+      return NextResponse.json({ error: 'Only Super Admin can delete a school/company' }, { status: 403 });
+    }
+
     const { id } = params;
 
     const countCheck = await query(`SELECT COUNT(*) as count FROM companies`);
