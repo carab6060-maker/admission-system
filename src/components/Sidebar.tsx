@@ -70,6 +70,15 @@ export default function Sidebar({
         </svg>
       ),
     },
+    {
+      href: '/dashboard/users',
+      label: 'Users & Access',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ),
+    },
   ];
 
   return (
@@ -154,9 +163,17 @@ export default function Sidebar({
                 <p className="text-sm font-semibold text-white truncate leading-tight">
                   {displayName}
                 </p>
-                <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                  {roleName}
-                </p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  {user?.role === 'superadmin' ? (
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-900/70 text-purple-200 border border-purple-600/50">
+                      Super Admin
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-slate-400 truncate">
+                      {roleName}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}

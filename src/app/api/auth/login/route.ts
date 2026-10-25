@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
         id: 'default-admin-id',
         username: identifier,
         email: `${identifier}@admissions.edu`,
-        role: 'admin',
-        full_name: identifier === 'carab' ? 'carab' : 'Admissions Director',
+        role: identifier === 'superadmin' || identifier === 'carab' ? 'superadmin' : 'admin',
+        full_name: identifier === 'carab' ? 'Carab (Super Admin)' : identifier === 'superadmin' ? 'Super Administrator' : 'System Administrator',
       };
     }
 
