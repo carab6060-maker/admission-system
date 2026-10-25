@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     const feeType = searchParams.get('fee_type')?.trim() || '';
     const paymentMethod = searchParams.get('payment_method')?.trim() || '';
     const studentId = searchParams.get('student_id')?.trim() || '';
+    const companyId = searchParams.get('company_id')?.trim() || '';
     const startDate = searchParams.get('start_date')?.trim() || '';
     const endDate = searchParams.get('end_date')?.trim() || '';
 
@@ -43,6 +44,11 @@ export async function GET(request: NextRequest) {
       conditions.push(`p.student_id::text = $${params.length}`);
     }
 
+    if (companyId && companyId !== 'All') {
+      params.push(companyId);
+      conditions.push(`p.company_id::text = $${params.length}`);
+    }
+
     if (startDate) {
       params.push(startDate);
       conditions.push(`p.payment_date >= $${params.length}`);
@@ -60,6 +66,7 @@ export async function GET(request: NextRequest) {
         p.id,
         p.receipt_no,
         p.student_id,
+        p.company_id,
         p.amount::float as amount,
         p.fee_type,
         p.payment_method,
@@ -73,16 +80,26 @@ export async function GET(request: NextRequest) {
         s.phone as student_phone,
         s.email as student_email,
         s.address as student_address,
-        s.photo_url as student_photo
+        s.photo_url as student_photo,
+        c.name as company_name,
+        c.code as company_code
       FROM payments p
       JOIN students s ON p.student_id = s.id
+      LEFT JOIN companies c ON p.company_id = c.id
       ${whereClause}
       ORDER BY p.payment_date DESC, p.created_at DESC
     `;
 
     const result = await query(sql, params);
 
-    // Summary metrics (all-time, today, this month)
+    // Summary metrics (filtered by company if provided)
+    let metricsFilter = '';
+    const mParams: any[] = [];
+    if (companyId && companyId !== 'All') {
+      mParams.push(companyId);
+      metricsFilter = `WHERE company_id::text = $1`;
+    }
+
     const metricsSql = `
       SELECT 
         COALESCE(SUM(amount), 0)::float as total_amount,
@@ -90,8 +107,9 @@ export async function GET(request: NextRequest) {
         COALESCE(SUM(CASE WHEN payment_date = CURRENT_DATE THEN amount ELSE 0 END), 0)::float as today_amount,
         COALESCE(SUM(CASE WHEN date_trunc('month', payment_date) = date_trunc('month', CURRENT_DATE) THEN amount ELSE 0 END), 0)::float as month_amount
       FROM payments
+      ${metricsFilter}
     `;
-    const metricsResult = await query(metricsSql);
+    const metricsResult = await query(metricsSql, mParams);
     const metrics = metricsResult.rows[0];
 
     return NextResponse.json({
@@ -139,10 +157,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment method is required' }, { status: 400 });
     }
 
-    // Check student existence
-    const studentCheck = await query(`SELECT id, first_name, middle_name, last_name, phone FROM students WHERE id::text = $1`, [studentId]);
+    // Check student existence & fetch company_id
+    const studentCheck = await query(
+      `SELECT id, first_name, middle_name, last_name, phone, company_id FROM students WHERE id::text = $1`,
+      [studentId]
+    );
     if (studentCheck.rows.length === 0) {
       return NextResponse.json({ error: 'Student record not found' }, { status: 404 });
+    }
+
+    const student = studentCheck.rows[0];
+    let companyId = body.company_id?.trim() || student.company_id;
+    if (!companyId) {
+      const compRes = await query(`SELECT id FROM companies WHERE is_active = true ORDER BY created_at ASC LIMIT 1`);
+      companyId = compRes.rows[0]?.id || null;
     }
 
     // Generate unique sequential receipt number e.g. RCP-2026-0007
@@ -153,13 +181,14 @@ export async function POST(request: NextRequest) {
 
     const insertRes = await query(
       `INSERT INTO payments (
-        receipt_no, student_id, amount, fee_type, payment_method,
+        receipt_no, student_id, company_id, amount, fee_type, payment_method,
         payment_date, reference_no, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *`,
       [
         receiptNo,
         studentId,
+        companyId,
         amount,
         feeType,
         paymentMethod,
@@ -171,12 +200,13 @@ export async function POST(request: NextRequest) {
 
     const newPayment = insertRes.rows[0];
 
-    // Return with joined student info
+    // Return with joined student and company info
     const fullRes = await query(
       `SELECT 
         p.id,
         p.receipt_no,
         p.student_id,
+        p.company_id,
         p.amount::float as amount,
         p.fee_type,
         p.payment_method,
@@ -190,9 +220,12 @@ export async function POST(request: NextRequest) {
         s.phone as student_phone,
         s.email as student_email,
         s.address as student_address,
-        s.photo_url as student_photo
+        s.photo_url as student_photo,
+        c.name as company_name,
+        c.code as company_code
       FROM payments p
       JOIN students s ON p.student_id = s.id
+      LEFT JOIN companies c ON p.company_id = c.id
       WHERE p.id = $1`,
       [newPayment.id]
     );

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import PrintModal, { StudentRecord } from '@/components/PrintModal';
+import { useCompany } from '@/contexts/CompanyContext';
 
 interface DashboardData {
   stats: {
@@ -16,6 +17,7 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
+  const { activeCompany } = useCompany();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -26,7 +28,8 @@ export default function DashboardPage() {
   const fetchDashboardData = useCallback(async () => {
     setRefreshing(true);
     try {
-      const res = await fetch('/api/dashboard');
+      const companyQuery = activeCompany ? `?company_id=${activeCompany.id}` : '';
+      const res = await fetch(`/api/dashboard${companyQuery}`);
       if (!res.ok) throw new Error('Failed to load dashboard metrics');
       const json = await res.json();
       setData(json);
@@ -36,7 +39,7 @@ export default function DashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [showToast]);
+  }, [showToast, activeCompany]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -106,10 +109,12 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#161938] tracking-tight">
-            Admissions Overview
+            {activeCompany ? `${activeCompany.name} Overview` : 'Multi-Company Admissions Overview'}
           </h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            Real-time enrollment statistics and student registrations
+            {activeCompany
+              ? `Real-time student admissions and operations for ${activeCompany.name} (${activeCompany.code})`
+              : 'Aggregated admissions and enrollment data across all registered companies'}
           </p>
         </div>
 

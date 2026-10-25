@@ -7,35 +7,42 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || 'month';
+    const companyId = searchParams.get('company_id')?.trim() || '';
     const customStart = searchParams.get('start_date');
     const customEnd = searchParams.get('end_date');
 
-    let dateCondition = '';
+    const conditions: string[] = [];
     const params: any[] = [];
 
     if (customStart && customEnd) {
       params.push(customStart, customEnd);
-      dateCondition = `WHERE p.payment_date >= $1 AND p.payment_date <= $2`;
+      conditions.push(`p.payment_date >= $1 AND p.payment_date <= $2`);
     } else {
       switch (period) {
         case 'today':
-          dateCondition = `WHERE p.payment_date = CURRENT_DATE`;
+          conditions.push(`p.payment_date = CURRENT_DATE`);
           break;
         case '7days':
-          dateCondition = `WHERE p.payment_date >= (CURRENT_DATE - INTERVAL '7 days')`;
+          conditions.push(`p.payment_date >= (CURRENT_DATE - INTERVAL '7 days')`);
           break;
         case 'month':
-          dateCondition = `WHERE date_trunc('month', p.payment_date) = date_trunc('month', CURRENT_DATE)`;
+          conditions.push(`date_trunc('month', p.payment_date) = date_trunc('month', CURRENT_DATE)`);
           break;
         case 'year':
-          dateCondition = `WHERE date_trunc('year', p.payment_date) = date_trunc('year', CURRENT_DATE)`;
+          conditions.push(`date_trunc('year', p.payment_date) = date_trunc('year', CURRENT_DATE)`);
           break;
         case 'all':
         default:
-          dateCondition = '';
           break;
       }
     }
+
+    if (companyId && companyId !== 'All') {
+      params.push(companyId);
+      conditions.push(`p.company_id::text = $${params.length}`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // 1. Overall Summary
     const summarySql = `
@@ -45,7 +52,7 @@ export async function GET(request: NextRequest) {
         COUNT(DISTINCT p.student_id)::int as unique_students,
         COALESCE(AVG(p.amount), 0)::float as average_payment
       FROM payments p
-      ${dateCondition}
+      ${whereClause}
     `;
     const summaryRes = await query(summarySql, params);
     const summary = summaryRes.rows[0];
@@ -58,7 +65,7 @@ export async function GET(request: NextRequest) {
         SUM(p.amount)::float as total,
         COUNT(*)::int as count
       FROM payments p
-      ${dateCondition}
+      ${whereClause}
       GROUP BY p.fee_type
       ORDER BY total DESC
     `;
@@ -75,7 +82,7 @@ export async function GET(request: NextRequest) {
         SUM(p.amount)::float as total,
         COUNT(*)::int as count
       FROM payments p
-      ${dateCondition}
+      ${whereClause}
       GROUP BY p.payment_method
       ORDER BY total DESC
     `;
@@ -92,7 +99,7 @@ export async function GET(request: NextRequest) {
         SUM(p.amount)::float as total,
         COUNT(*)::int as count
       FROM payments p
-      ${dateCondition}
+      ${whereClause}
       GROUP BY TO_CHAR(p.payment_date, 'YYYY-MM-DD')
       ORDER BY date_label ASC
     `;
@@ -112,10 +119,13 @@ export async function GET(request: NextRequest) {
         s.first_name,
         s.middle_name,
         s.last_name,
-        s.phone as student_phone
+        s.phone as student_phone,
+        c.name as company_name,
+        c.code as company_code
       FROM payments p
       JOIN students s ON p.student_id = s.id
-      ${dateCondition}
+      LEFT JOIN companies c ON p.company_id = c.id
+      ${whereClause}
       ORDER BY p.payment_date DESC, p.created_at DESC
     `;
     const listRes = await query(listSql, params);

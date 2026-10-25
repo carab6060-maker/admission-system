@@ -14,6 +14,9 @@ export interface StudentRecord {
   email?: string | null;
   address: string;
   photo_url?: string | null;
+  company_id?: string | null;
+  company_name?: string | null;
+  company_code?: string | null;
   created_at: string;
 }
 
@@ -86,10 +89,10 @@ export default function PrintModal({ isOpen, onClose, student }: PrintModalProps
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-[#161938]">
-                  HORIZON ACADEMY ADMISSION SYSTEM
+                  {student.company_name ? student.company_name.toUpperCase() : 'EDUADMIT ACADEMY'}
                 </h1>
                 <p className="text-xs text-slate-500 font-medium tracking-wide uppercase">
-                  Official Student Registration & Admission Slip
+                  Official Student Registration & Admission Slip {student.company_code ? `(${student.company_code})` : ''}
                 </p>
                 <p className="text-[11px] text-slate-400">
                   Registered: {formattedCreated}

@@ -7,8 +7,10 @@ import { useToast } from '@/components/Toast';
 import Modal from '@/components/Modal';
 import ConfirmModal from '@/components/ConfirmModal';
 import PrintModal, { StudentRecord } from '@/components/PrintModal';
+import { useCompany } from '@/contexts/CompanyContext';
 
 export default function StudentsPage() {
+  const { activeCompany, companies } = useCompany();
   const searchParams = useSearchParams();
   const initialSearchParam = searchParams.get('search') || '';
 
@@ -30,12 +32,13 @@ export default function StudentsPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Fetch students with search
+  // Fetch students with search & activeCompany
   const fetchStudents = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       if (search.trim()) params.set('search', search.trim());
+      if (activeCompany) params.set('company_id', activeCompany.id);
 
       const res = await fetch(`/api/students?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load students');
@@ -46,7 +49,7 @@ export default function StudentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, showToast]);
+  }, [search, activeCompany, showToast]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

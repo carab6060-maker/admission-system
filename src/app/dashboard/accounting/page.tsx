@@ -7,6 +7,7 @@ import Modal from '@/components/Modal';
 import ConfirmModal from '@/components/ConfirmModal';
 import ReceiptModal, { PaymentRecord } from '@/components/ReceiptModal';
 import { StudentRecord } from '@/components/PrintModal';
+import { useCompany } from '@/contexts/CompanyContext';
 
 interface Metrics {
   totalAmount: number;
@@ -16,6 +17,7 @@ interface Metrics {
 }
 
 export default function AccountingPage() {
+  const { activeCompany } = useCompany();
   const { showToast } = useToast();
 
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -60,6 +62,7 @@ export default function AccountingPage() {
       if (search.trim()) params.set('search', search.trim());
       if (selectedFeeType !== 'All') params.set('fee_type', selectedFeeType);
       if (selectedMethod !== 'All') params.set('payment_method', selectedMethod);
+      if (activeCompany) params.set('company_id', activeCompany.id);
 
       const res = await fetch(`/api/payments?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load payment records');
@@ -71,12 +74,13 @@ export default function AccountingPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, selectedFeeType, selectedMethod, showToast]);
+  }, [search, selectedFeeType, selectedMethod, activeCompany, showToast]);
 
   // Fetch student list for dropdown
   const fetchStudents = useCallback(async () => {
     try {
-      const res = await fetch('/api/students');
+      const q = activeCompany ? `?company_id=${activeCompany.id}` : '';
+      const res = await fetch(`/api/students${q}`);
       if (res.ok) {
         const data = await res.json();
         setStudents(data.data || []);
@@ -84,7 +88,7 @@ export default function AccountingPage() {
     } catch {
       // silent
     }
-  }, []);
+  }, [activeCompany]);
 
   useEffect(() => {
     fetchStudents();

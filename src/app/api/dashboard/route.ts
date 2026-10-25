@@ -1,31 +1,64 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const totalRes = await query(`SELECT COUNT(*) as count FROM students`);
+    const { searchParams } = new URL(request.url);
+    const companyId = searchParams.get('company_id')?.trim() || '';
+
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (companyId && companyId !== 'All') {
+      params.push(companyId);
+      conditions.push(`company_id::text = $1`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const totalRes = await query(`SELECT COUNT(*) as count FROM students ${whereClause}`, params);
     const totalStudents = parseInt(totalRes.rows[0].count, 10);
 
-    const maleRes = await query(`SELECT COUNT(*) as count FROM students WHERE LOWER(gender) = 'male'`);
+    const maleCond = [...conditions, `LOWER(gender) = 'male'`];
+    const maleRes = await query(`SELECT COUNT(*) as count FROM students WHERE ${maleCond.join(' AND ')}`, params);
     const maleStudents = parseInt(maleRes.rows[0].count, 10);
 
-    const femaleRes = await query(`SELECT COUNT(*) as count FROM students WHERE LOWER(gender) = 'female'`);
+    const femaleCond = [...conditions, `LOWER(gender) = 'female'`];
+    const femaleRes = await query(`SELECT COUNT(*) as count FROM students WHERE ${femaleCond.join(' AND ')}`, params);
     const femaleStudents = parseInt(femaleRes.rows[0].count, 10);
 
+    const newAdmCond = [...conditions, `created_at >= (CURRENT_TIMESTAMP - INTERVAL '30 days')`];
     const newAdmissionsRes = await query(
-      `SELECT COUNT(*) as count FROM students 
-       WHERE created_at >= (CURRENT_TIMESTAMP - INTERVAL '30 days')`
+      `SELECT COUNT(*) as count FROM students WHERE ${newAdmCond.join(' AND ')}`,
+      params
     );
     const newAdmissions = parseInt(newAdmissionsRes.rows[0].count, 10);
 
-    // Recent Student Registrations
+    // Recent Student Registrations with company info
+    const sCond = companyId && companyId !== 'All' ? `WHERE s.company_id::text = $1` : '';
     const recentRes = await query(
-      `SELECT id, first_name, middle_name, last_name, gender, date_of_birth, phone, email, address, photo_url, created_at 
-       FROM students 
-       ORDER BY created_at DESC 
-       LIMIT 6`
+      `SELECT 
+        s.id, 
+        s.first_name, 
+        s.middle_name, 
+        s.last_name, 
+        s.gender, 
+        s.date_of_birth, 
+        s.phone, 
+        s.email, 
+        s.address, 
+        s.photo_url, 
+        s.created_at,
+        c.name as company_name,
+        c.code as company_code
+       FROM students s
+       LEFT JOIN companies c ON s.company_id = c.id
+       ${sCond}
+       ORDER BY s.created_at DESC 
+       LIMIT 6`,
+      params
     );
 
     return NextResponse.json({

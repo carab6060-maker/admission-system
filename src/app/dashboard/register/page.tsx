@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import PrintModal, { StudentRecord } from '@/components/PrintModal';
+import { useCompany } from '@/contexts/CompanyContext';
 
 const initialFormData = {
   first_name: '',
@@ -15,13 +16,27 @@ const initialFormData = {
   email: '',
   address: '',
   photo_url: '',
+  company_id: '',
 };
 
 export default function StudentRegistrationPage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const { companies, activeCompany } = useCompany();
 
-  const [form, setForm] = useState(initialFormData);
+  const [form, setForm] = useState({
+    ...initialFormData,
+    company_id: activeCompany?.id || companies[0]?.id || '',
+  });
+
+  // Keep company_id updated if activeCompany changes initially
+  useEffect(() => {
+    if (activeCompany && !form.company_id) {
+      setForm((prev) => ({ ...prev, company_id: activeCompany.id }));
+    } else if (companies.length > 0 && !form.company_id) {
+      setForm((prev) => ({ ...prev, company_id: companies[0].id }));
+    }
+  }, [activeCompany, companies]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [calculatedAge, setCalculatedAge] = useState<number | null>(null);
@@ -141,6 +156,25 @@ export default function StudentRegistrationPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {/* Institution / Company */}
+            <div className="sm:col-span-3">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
+                Enrolling Institution / School *
+              </label>
+              <select
+                value={form.company_id}
+                onChange={(e) => setForm({ ...form, company_id: e.target.value })}
+                className="input-field font-semibold text-blue-700"
+                required
+              >
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.code}) - {c.address || 'Main Campus'}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* First Name */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">

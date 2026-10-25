@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
+import { useCompany } from '@/contexts/CompanyContext';
 
 interface FinancialReportData {
   period: string;
@@ -42,10 +43,13 @@ interface FinancialReportData {
     middle_name: string;
     last_name: string;
     student_phone?: string;
+    company_name?: string;
+    company_code?: string;
   }[];
 }
 
 export default function ReportsPage() {
+  const { activeCompany } = useCompany();
   const { showToast } = useToast();
 
   const [period, setPeriod] = useState<'today' | '7days' | 'month' | 'year' | 'all' | 'custom'>('month');
@@ -59,6 +63,7 @@ export default function ReportsPage() {
       setLoading(true);
       const params = new URLSearchParams();
       params.set('period', period);
+      if (activeCompany) params.set('company_id', activeCompany.id);
       if (period === 'custom') {
         if (startDate) params.set('start_date', startDate);
         if (endDate) params.set('end_date', endDate);
@@ -73,7 +78,7 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [period, startDate, endDate, showToast]);
+  }, [period, startDate, endDate, activeCompany, showToast]);
 
   useEffect(() => {
     fetchReport();

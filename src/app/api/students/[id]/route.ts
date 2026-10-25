@@ -10,7 +10,11 @@ export async function GET(
   try {
     const { id } = params;
     const res = await query(
-      `SELECT * FROM students WHERE id::text = $1 LIMIT 1`,
+      `SELECT s.*, c.name as company_name, c.code as company_code, c.phone as company_phone, c.address as company_address
+       FROM students s
+       LEFT JOIN companies c ON s.company_id = c.id
+       WHERE s.id::text = $1 
+       LIMIT 1`,
       [id]
     );
 
@@ -52,6 +56,7 @@ export async function PUT(
     const email = body.email !== undefined ? body.email : current.email;
     const address = body.address !== undefined ? body.address : current.address;
     const photoUrl = body.photo_url !== undefined ? body.photo_url : current.photo_url;
+    const companyId = body.company_id !== undefined ? body.company_id : current.company_id;
 
     const res = await query(
       `UPDATE students SET
@@ -64,8 +69,9 @@ export async function PUT(
         email = $7,
         address = $8,
         photo_url = $9,
+        company_id = $10,
         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $10
+       WHERE id = $11
        RETURNING *`,
       [
         firstName,
@@ -77,11 +83,20 @@ export async function PUT(
         email,
         address,
         photoUrl,
+        companyId,
         current.id,
       ]
     );
 
-    return NextResponse.json({ success: true, data: res.rows[0] });
+    const fullRes = await query(
+      `SELECT s.*, c.name as company_name, c.code as company_code
+       FROM students s
+       LEFT JOIN companies c ON s.company_id = c.id
+       WHERE s.id = $1`,
+      [res.rows[0].id]
+    );
+
+    return NextResponse.json({ success: true, data: fullRes.rows[0] });
   } catch (err: any) {
     console.error('Error updating student:', err);
     return NextResponse.json({ error: err.message || 'Failed to update student' }, { status: 500 });
@@ -100,16 +115,14 @@ export async function DELETE(
     );
 
     if (res.rows.length === 0) {
-      return NextResponse.json({ error: 'Student record not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    const name = `${res.rows[0].first_name} ${res.rows[0].last_name}`;
     return NextResponse.json({
       success: true,
-      message: `Student ${name} deleted successfully`,
+      message: `Student ${res.rows[0].first_name} ${res.rows[0].last_name} deleted successfully`,
     });
   } catch (err: any) {
-    console.error('Error deleting student:', err);
     return NextResponse.json({ error: err.message || 'Failed to delete student' }, { status: 500 });
   }
 }

@@ -21,6 +21,9 @@ export interface PaymentRecord {
   student_email?: string | null;
   student_address?: string;
   student_photo?: string | null;
+  company_id?: string | null;
+  company_name?: string | null;
+  company_code?: string | null;
 }
 
 interface ReceiptModalProps {
@@ -81,14 +84,14 @@ export default function ReceiptModal({ isOpen, onClose, payment }: ReceiptModalP
           <div className="flex items-start justify-between border-b border-slate-200 pb-5">
             <div className="flex items-center gap-3.5">
               <div className="w-12 h-12 rounded-xl bg-blue-600 text-white font-black text-xl flex items-center justify-center shadow-md shadow-blue-500/20">
-                EA
+                {payment.company_code ? payment.company_code.slice(0, 3) : 'EA'}
               </div>
               <div>
                 <h2 className="text-lg font-black tracking-tight text-[#161938]">
-                  EduAdmit Academy
+                  {payment.company_name || 'EduAdmit Academy'}
                 </h2>
                 <p className="text-xs text-slate-500 font-medium">
-                  Finance & Student Accounts Department
+                  Finance & Accounts Department {payment.company_code ? `(${payment.company_code})` : ''}
                 </p>
                 <p className="text-[11px] text-slate-400">
                   Official Payment Voucher & Acknowledgement
