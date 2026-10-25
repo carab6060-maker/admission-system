@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { useCompany } from '@/contexts/CompanyContext';
 
 interface TopbarProps {
   title: string;
@@ -10,8 +9,6 @@ interface TopbarProps {
 }
 
 export default function Topbar({ title, subtitle, onMobileToggle }: TopbarProps) {
-  const { companies, activeCompany, setActiveCompanyId } = useCompany();
-
   const todayStr = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -46,26 +43,6 @@ export default function Topbar({ title, subtitle, onMobileToggle }: TopbarProps)
       </div>
 
       <div className="flex items-center gap-2.5">
-        {/* Multi-Company Workspace Selector */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-          <svg className="w-4 h-4 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-          <select
-            value={activeCompany?.id || 'All'}
-            onChange={(e) => setActiveCompanyId(e.target.value === 'All' ? null : e.target.value)}
-            className="text-xs font-bold text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer max-w-[130px] sm:max-w-[190px] truncate"
-            title="Switch Workspace Company"
-          >
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.code})
-              </option>
-            ))}
-            <option value="All">All Companies (Global View)</option>
-          </select>
-        </div>
-
         {/* Date badge */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200/70 text-xs font-medium text-slate-600 shadow-2xs">
           <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
