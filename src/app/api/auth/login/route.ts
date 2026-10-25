@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       username: user.username,
       role: user.role,
       fullName: user.full_name,
+      companyId: user.company_id || null,
     });
 
     const response = NextResponse.json({

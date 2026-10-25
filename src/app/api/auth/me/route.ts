@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
         email: payload.email,
         fullName: payload.fullName || 'Administrator',
         role: payload.role || 'admin',
+        companyId: payload.companyId || null,
       },
     });
   } catch {
@@ -52,6 +53,7 @@ export async function GET(request: NextRequest) {
         email: payload.email,
         fullName: payload.fullName || 'Administrator',
         role: payload.role || 'admin',
+        companyId: payload.companyId || null,
       },
     });
   }

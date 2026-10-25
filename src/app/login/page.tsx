@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 
 export default function LoginPage() {
-  const [usernameOrEmail, setUsernameOrEmail] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [usernameOrEmail, setUsernameOrEmail] = useState('carab6848@gmail.com');
+  const [password, setPassword] = useState('Moha0241');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,27 +32,33 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6FB] flex items-center justify-center p-4">
-      <div className="w-full max-w-[440px] bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-200/80 p-8 sm:p-10 animate-fadeIn">
+    <div className="min-h-screen bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Ambient background glow */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-72 h-72 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+
+      <div className="w-full max-w-[440px] bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-slate-100 p-8 sm:p-10 animate-fadeIn relative z-10">
         
-        {/* Brand Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3.5 mb-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-600/30">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-[#161938] tracking-tight">
-                EduAdmit
-              </h1>
-              <p className="text-xs text-slate-500 font-medium">Student Admission Portal</p>
-            </div>
+        {/* Brand Header with FTC Logo */}
+        <div className="flex flex-col items-center text-center mb-7">
+          <div className="relative w-24 h-24 mb-3.5 rounded-full p-1 bg-white shadow-xl shadow-blue-900/15 border-2 border-blue-500/30 ring-4 ring-blue-50 flex items-center justify-center overflow-hidden hover:scale-105 transition-transform duration-300">
+            <img
+              src="/logo.jpg"
+              alt="Flight Training Centre Logo"
+              className="w-full h-full object-cover rounded-full"
+            />
           </div>
-          <p className="text-slate-500 text-sm">
-            Sign in to access student admissions and records
+          <h1 className="text-2xl font-black text-[#161938] tracking-tight">
+            Flight Training Centre
+          </h1>
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 mt-1.5 rounded-full bg-blue-50 border border-blue-100">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+            <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">
+              Admission & Student Portal
+            </span>
+          </div>
+          <p className="text-slate-400 text-xs mt-2 max-w-[280px]">
+            Sign in with your institutional credentials to manage your admissions
           </p>
         </div>
 
@@ -118,11 +124,46 @@ export default function LoginPage() {
           </div>
         </form>
 
-        {/* Credentials Note */}
-        <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-          <p className="text-xs text-slate-500">
-            Database accounts: <span className="font-semibold text-slate-700">admin</span> or <span className="font-semibold text-slate-700">carab</span> (password: <span className="font-semibold text-slate-700">admin123</span>)
+        {/* Credentials Note & Quick Fill */}
+        <div className="mt-6 pt-5 border-t border-slate-100">
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center mb-2.5">
+            Quick Credentials / Demo Access
           </p>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setUsernameOrEmail('carab6848@gmail.com');
+                setPassword('Moha0241');
+              }}
+              className="w-full text-left p-2.5 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 border border-blue-100/90 transition-colors flex items-center justify-between"
+            >
+              <div>
+                <p className="text-xs font-bold text-blue-900">Flight Training Centre</p>
+                <p className="text-[11px] text-blue-600 font-mono">carab6848@gmail.com</p>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-600 text-white shadow-xs">
+                School Admin
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setUsernameOrEmail('carab');
+                setPassword('admin123');
+              }}
+              className="w-full text-left p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 transition-colors flex items-center justify-between"
+            >
+              <div>
+                <p className="text-xs font-semibold text-slate-700">Root Super Admin</p>
+                <p className="text-[11px] text-slate-400 font-mono">carab (admin123)</p>
+              </div>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
+                Super Admin
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
