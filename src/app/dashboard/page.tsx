@@ -14,7 +14,6 @@ interface DashboardData {
     rejectedApplications: number;
   };
   recentStudents: StudentRecord[];
-  gradeDistribution: { grade_applying: string; count: number }[];
 }
 
 export default function DashboardPage() {
@@ -179,7 +178,7 @@ export default function DashboardPage() {
               Recent Student Registrations
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Newly submitted student admission forms and their current review status
+              Newly submitted student applications and current review status
             </p>
           </div>
           <Link
@@ -197,80 +196,78 @@ export default function DashboardPage() {
           <table className="w-full text-left text-sm text-slate-700">
             <thead className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-5">Student ID</th>
                 <th className="py-3 px-5">Student Name</th>
-                <th className="py-3 px-5">Class / Grade</th>
-                <th className="py-3 px-5">Parent / Contact</th>
-                <th className="py-3 px-5">Admission Date</th>
+                <th className="py-3 px-5">Gender</th>
+                <th className="py-3 px-5">Phone</th>
+                <th className="py-3 px-5">Address</th>
                 <th className="py-3 px-5">Status</th>
                 <th className="py-3 px-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {data?.recentStudents && data.recentStudents.length > 0 ? (
-                data.recentStudents.map((student) => (
-                  <tr key={student.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-5 font-mono text-xs font-bold text-blue-600">
-                      {student.student_id}
-                    </td>
-                    <td className="py-3.5 px-5">
-                      <div className="font-semibold text-slate-900">{student.full_name}</div>
-                      <span className="text-[11px] text-slate-400 capitalize">{student.gender}</span>
-                    </td>
-                    <td className="py-3.5 px-5 font-medium text-slate-800">
-                      {student.grade_applying}
-                    </td>
-                    <td className="py-3.5 px-5">
-                      <div className="text-xs text-slate-800 font-medium">{student.parent_name}</div>
-                      <span className="text-[11px] text-slate-500">{student.phone}</span>
-                    </td>
-                    <td className="py-3.5 px-5 text-xs text-slate-600">
-                      {student.admission_date
-                        ? new Date(student.admission_date).toLocaleDateString()
-                        : '—'}
-                    </td>
-                    <td className="py-3.5 px-5">
-                      <span
-                        className={`badge ${
-                          student.status === 'Approved'
-                            ? 'badge-approved'
-                            : student.status === 'Rejected'
-                            ? 'badge-rejected'
-                            : 'badge-pending'
-                        }`}
-                      >
-                        {student.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setPrintStudent(student)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Print Admission Slip"
+                data.recentStudents.map((student) => {
+                  const studentFullName = `${student.first_name} ${student.middle_name} ${student.last_name}`;
+                  return (
+                    <tr key={student.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-5">
+                        <div className="font-semibold text-slate-900">{studentFullName}</div>
+                        <span className="text-[11px] text-slate-400">
+                          DOB: {student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : 'N/A'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-5 font-medium text-slate-800">
+                        {student.gender}
+                      </td>
+                      <td className="py-3.5 px-5 text-xs text-slate-800 font-medium">
+                        {student.phone}
+                      </td>
+                      <td className="py-3.5 px-5 text-xs text-slate-600 max-w-[200px] truncate" title={student.address}>
+                        {student.address}
+                      </td>
+                      <td className="py-3.5 px-5">
+                        <span
+                          className={`badge ${
+                            student.status === 'Approved'
+                              ? 'badge-approved'
+                              : student.status === 'Rejected'
+                              ? 'badge-rejected'
+                              : 'badge-pending'
+                          }`}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                          </svg>
-                        </button>
-                        <Link
-                          href={`/dashboard/students?search=${encodeURIComponent(student.student_id)}`}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-                          title="View in directory"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {student.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setPrintStudent(student)}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Print Admission Slip"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                          </button>
+                          <Link
+                            href={`/dashboard/students?search=${encodeURIComponent(student.first_name)}`}
+                            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                            title="View in directory"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400 text-sm">
+                  <td colSpan={6} className="py-8 text-center text-slate-400 text-sm">
                     No student registrations found yet.
                   </td>
                 </tr>
@@ -279,27 +276,6 @@ export default function DashboardPage() {
           </table>
         </div>
       </div>
-
-      {/* Grade Distribution Overview */}
-      {data?.gradeDistribution && data.gradeDistribution.length > 0 && (
-        <div className="card-base p-6">
-          <h3 className="text-sm font-bold text-[#161938] uppercase tracking-wider mb-4">
-            Class / Grade Distribution
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {data.gradeDistribution.map((item, i) => (
-              <div
-                key={i}
-                className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-center"
-              >
-                <p className="text-xs font-semibold text-slate-600 truncate">{item.grade_applying}</p>
-                <p className="text-xl font-bold text-[#161938] mt-1">{item.count}</p>
-                <span className="text-[10px] text-slate-400">Enrolled</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Printable Slip Modal */}
       <PrintModal

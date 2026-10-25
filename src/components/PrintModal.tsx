@@ -5,21 +5,16 @@ import Modal from './Modal';
 
 export interface StudentRecord {
   id: string;
-  student_id: string;
-  full_name: string;
+  first_name: string;
+  middle_name: string;
+  last_name: string;
   gender: string;
   date_of_birth: string;
   phone: string;
-  parent_name: string;
-  parent_phone: string;
   email?: string | null;
   address: string;
-  grade_applying: string;
-  previous_school?: string | null;
-  admission_date: string;
   photo_url?: string | null;
   status: string;
-  notes?: string | null;
   created_at: string;
 }
 
@@ -36,6 +31,8 @@ export default function PrintModal({ isOpen, onClose, student }: PrintModalProps
     window.print();
   };
 
+  const fullName = `${student.first_name} ${student.middle_name} ${student.last_name}`.trim();
+
   const formattedDob = student.date_of_birth
     ? new Date(student.date_of_birth).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -44,13 +41,13 @@ export default function PrintModal({ isOpen, onClose, student }: PrintModalProps
       })
     : 'N/A';
 
-  const formattedAdmDate = student.admission_date
-    ? new Date(student.admission_date).toLocaleDateString('en-US', {
+  const formattedCreated = student.created_at
+    ? new Date(student.created_at).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
       })
-    : 'N/A';
+    : new Date().toLocaleDateString();
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Admission Record & Printable Slip" size="lg">
@@ -96,7 +93,7 @@ export default function PrintModal({ isOpen, onClose, student }: PrintModalProps
                   Official Student Registration & Admission Slip
                 </p>
                 <p className="text-[11px] text-slate-400">
-                  Affiliated Academic Institute • Ref: {student.student_id}
+                  Registered: {formattedCreated}
                 </p>
               </div>
             </div>
@@ -119,35 +116,37 @@ export default function PrintModal({ isOpen, onClose, student }: PrintModalProps
             </div>
           </div>
 
-          {/* Student Photo and Top Info */}
+          {/* Student Photo and Core Info */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 pb-6 border-b border-slate-100">
             <div className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-xl border border-slate-200/80">
               {student.photo_url ? (
                 <img
                   src={student.photo_url}
-                  alt={student.full_name}
+                  alt={fullName}
                   className="w-28 h-28 object-cover rounded-xl border-2 border-slate-300"
                 />
               ) : (
                 <div className="w-28 h-28 bg-blue-100 text-blue-700 flex flex-col items-center justify-center rounded-xl border-2 border-blue-200 font-bold text-2xl uppercase">
-                  {student.full_name.slice(0, 2)}
+                  {student.first_name[0]}{student.last_name[0]}
                   <span className="text-[10px] text-blue-500 font-normal tracking-normal mt-1">Student</span>
                 </div>
               )}
-              <span className="mt-2 text-xs font-mono font-bold text-[#161938] bg-white px-2 py-0.5 rounded border border-slate-200">
-                {student.student_id}
-              </span>
             </div>
 
             <div className="md:col-span-3 grid grid-cols-2 gap-4">
               <div>
-                <span className="text-[11px] uppercase font-semibold text-slate-400">Student Full Name</span>
-                <p className="text-base font-bold text-slate-900 mt-0.5">{student.full_name}</p>
+                <span className="text-[11px] uppercase font-semibold text-slate-400">First Name</span>
+                <p className="text-base font-bold text-slate-900 mt-0.5">{student.first_name}</p>
               </div>
 
               <div>
-                <span className="text-[11px] uppercase font-semibold text-slate-400">Grade / Class Applying For</span>
-                <p className="text-base font-bold text-blue-600 mt-0.5">{student.grade_applying}</p>
+                <span className="text-[11px] uppercase font-semibold text-slate-400">Middle Name</span>
+                <p className="text-base font-bold text-slate-900 mt-0.5">{student.middle_name}</p>
+              </div>
+
+              <div>
+                <span className="text-[11px] uppercase font-semibold text-slate-400">Last Name</span>
+                <p className="text-base font-bold text-slate-900 mt-0.5">{student.last_name}</p>
               </div>
 
               <div>
@@ -161,68 +160,24 @@ export default function PrintModal({ isOpen, onClose, student }: PrintModalProps
               </div>
 
               <div>
-                <span className="text-[11px] uppercase font-semibold text-slate-400">Student Phone</span>
+                <span className="text-[11px] uppercase font-semibold text-slate-400">Phone Number</span>
                 <p className="text-sm font-medium text-slate-800 mt-0.5">{student.phone}</p>
               </div>
 
-              <div>
+              <div className="col-span-2">
                 <span className="text-[11px] uppercase font-semibold text-slate-400">Email Address</span>
                 <p className="text-sm font-medium text-slate-800 mt-0.5">{student.email || 'None provided'}</p>
               </div>
-            </div>
-          </div>
 
-          {/* Detailed Sections */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200/80">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3 border-b border-slate-200 pb-1">
-                Parent & Guardian Information
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-xs text-slate-500">Parent/Guardian Name:</span>
-                  <p className="font-semibold text-slate-900">{student.parent_name}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-500">Contact Number:</span>
-                  <p className="font-semibold text-slate-900">{student.parent_phone}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-500">Residential Address:</span>
-                  <p className="text-slate-800">{student.address}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200/80">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3 border-b border-slate-200 pb-1">
-                Academic & Admission Record
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-xs text-slate-500">Admission Date:</span>
-                  <p className="font-semibold text-slate-900">{formattedAdmDate}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-500">Previous School:</span>
-                  <p className="text-slate-800">{student.previous_school || 'First Time Enrollment / None'}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-500">Remarks / Notes:</span>
-                  <p className="text-slate-700 text-xs italic">{student.notes || 'No special remarks recorded.'}</p>
-                </div>
+              <div className="col-span-2">
+                <span className="text-[11px] uppercase font-semibold text-slate-400">Residential Address</span>
+                <p className="text-sm font-medium text-slate-800 mt-0.5">{student.address}</p>
               </div>
             </div>
           </div>
 
           {/* Signatures & Seal Footer */}
-          <div className="mt-8 pt-8 border-t-2 border-slate-200 grid grid-cols-3 gap-6 text-center">
-            <div>
-              <div className="h-12 border-b border-dashed border-slate-400"></div>
-              <p className="text-xs font-bold text-slate-700 mt-2">Parent / Guardian Signature</p>
-              <p className="text-[10px] text-slate-400">Date: _______________</p>
-            </div>
-
+          <div className="mt-8 pt-8 border-t-2 border-slate-200 grid grid-cols-2 gap-8 text-center">
             <div>
               <div className="h-12 border-b border-dashed border-slate-400 flex items-end justify-center pb-1">
                 <span className="text-[11px] font-mono text-slate-500">[ OFFICIAL ADMISSION STAMP ]</span>
@@ -234,7 +189,7 @@ export default function PrintModal({ isOpen, onClose, student }: PrintModalProps
             <div>
               <div className="h-12 border-b border-dashed border-slate-400"></div>
               <p className="text-xs font-bold text-slate-700 mt-2">Admissions Director</p>
-              <p className="text-[10px] text-slate-400">Approved Authority</p>
+              <p className="text-[10px] text-slate-400">Authorized Signature</p>
             </div>
           </div>
         </div>
