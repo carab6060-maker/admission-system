@@ -16,11 +16,23 @@ export async function GET(request: NextRequest) {
     const conditions: string[] = [];
     const params: any[] = [];
 
+    const isSuperAdmin = Boolean(
+      authUser && (
+        authUser.role?.toLowerCase()?.trim() === 'superadmin' ||
+        authUser.username?.toLowerCase()?.trim() === 'superadmin' ||
+        authUser.username?.toLowerCase()?.trim() === 'carab'
+      )
+    );
+
     // Isolation: non-superadmin only sees users of their school
-    if (authUser && authUser.role !== 'superadmin' && authUser.companyId) {
-      params.push(authUser.companyId);
-      conditions.push(`company_id::text = $${params.length}`);
-      conditions.push(`LOWER(role) != 'superadmin'`);
+    if (authUser && !isSuperAdmin) {
+      if (authUser.companyId) {
+        params.push(authUser.companyId);
+        conditions.push(`u.company_id::text = $${params.length}`);
+      } else {
+        conditions.push(`1 = 0`);
+      }
+      conditions.push(`LOWER(u.role) != 'superadmin'`);
     }
 
     if (search) {
@@ -67,6 +79,17 @@ export async function GET(request: NextRequest) {
     const result = await query(sql, params);
 
     // Summary statistics
+    let statsClause = '';
+    const statsParams: any[] = [];
+    if (authUser && !isSuperAdmin) {
+      if (authUser.companyId) {
+        statsParams.push(authUser.companyId);
+        statsClause = `WHERE company_id::text = $1 AND LOWER(role) != 'superadmin'`;
+      } else {
+        statsClause = `WHERE 1 = 0`;
+      }
+    }
+
     const statsSql = `
       SELECT 
         COUNT(*)::int as total_users,
@@ -75,8 +98,9 @@ export async function GET(request: NextRequest) {
         COUNT(CASE WHEN LOWER(role) = 'staff' OR LOWER(role) = 'cashier' THEN 1 END)::int as staff_users,
         COUNT(CASE WHEN is_active = true THEN 1 END)::int as active_users
       FROM users
+      ${statsClause}
     `;
-    const statsRes = await query(statsSql);
+    const statsRes = await query(statsSql, statsParams);
     const stats = statsRes.rows[0];
 
     return NextResponse.json({
@@ -85,7 +109,7 @@ export async function GET(request: NextRequest) {
       data: result.rows,
       stats: {
         totalUsers: stats.total_users,
-        superAdmins: stats.super_admins,
+        superAdmins: !isSuperAdmin ? 0 : stats.super_admins,
         admins: stats.admins,
         staffUsers: stats.staff_users,
         activeUsers: stats.active_users,
@@ -145,11 +169,19 @@ export async function POST(request: NextRequest) {
     const authUser = await getAuthUser(request);
     let companyId = body.company_id || null;
 
-    if (authUser && authUser.role !== 'superadmin') {
+    const isSuperAdmin = Boolean(
+      authUser && (
+        authUser.role?.toLowerCase()?.trim() === 'superadmin' ||
+        authUser.username?.toLowerCase()?.trim() === 'superadmin' ||
+        authUser.username?.toLowerCase()?.trim() === 'carab'
+      )
+    );
+
+    if (!isSuperAdmin) {
       if (role === 'superadmin') {
         return NextResponse.json({ error: 'Only Super Admin can create Super Admin accounts' }, { status: 403 });
       }
-      companyId = authUser.companyId || null;
+      companyId = authUser?.companyId || null;
     }
 
     const passwordHash = await bcrypt.hash(password, 10);

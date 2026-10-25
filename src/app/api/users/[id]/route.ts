@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { query } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,9 +10,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authUser = await getAuthUser(request);
     const { id } = params;
     const res = await query(
-      `SELECT id, username, email, full_name, role, is_active, created_at, updated_at 
+      `SELECT id, username, email, full_name, role, is_active, company_id, created_at, updated_at 
        FROM users 
        WHERE id::text = $1 
        LIMIT 1`,
@@ -22,7 +24,12 @@ export async function GET(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: res.rows[0] });
+    const user = res.rows[0];
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId && user.company_id !== authUser.companyId) {
+      return NextResponse.json({ error: 'Access denied: user belongs to another school' }, { status: 403 });
+    }
+
+    return NextResponse.json({ success: true, data: user });
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || 'Failed to fetch user' },
@@ -36,6 +43,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authUser = await getAuthUser(request);
     const { id } = params;
     const body = await request.json();
 
@@ -45,6 +53,16 @@ export async function PUT(
     }
 
     const current = check.rows[0];
+
+    // Isolation check
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId) {
+      if (current.company_id !== authUser.companyId || current.role === 'superadmin') {
+        return NextResponse.json({ error: 'Access denied: user belongs to another school' }, { status: 403 });
+      }
+      if (body.role === 'superadmin') {
+        return NextResponse.json({ error: 'Only Super Admin can promote a user to Super Admin' }, { status: 403 });
+      }
+    }
 
     // Check email uniqueness if modified
     if (body.email && body.email.toLowerCase() !== current.email.toLowerCase()) {
@@ -79,6 +97,18 @@ export async function PUT(
       passwordHash = await bcrypt.hash(body.password.trim(), 10);
     }
 
+    let companyId = current.company_id;
+    const isSuperAdmin = Boolean(
+      authUser && (
+        authUser.role === 'superadmin' || 
+        authUser.username === 'superadmin' || 
+        authUser.username === 'carab'
+      )
+    );
+    if (isSuperAdmin && body.company_id !== undefined) {
+      companyId = body.company_id || null;
+    }
+
     const updateRes = await query(
       `UPDATE users SET
         username = $1,
@@ -87,10 +117,11 @@ export async function PUT(
         role = $4,
         is_active = $5,
         password_hash = $6,
+        company_id = $7,
         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7
-       RETURNING id, username, email, full_name, role, is_active, created_at, updated_at`,
-      [username, email, fullName, role, isActive, passwordHash, current.id]
+       WHERE id = $8
+       RETURNING id, username, email, full_name, role, is_active, company_id, created_at, updated_at`,
+      [username, email, fullName, role, isActive, passwordHash, companyId, current.id]
     );
 
     return NextResponse.json({
@@ -112,6 +143,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authUser = await getAuthUser(request);
     const { id } = params;
 
     const check = await query(`SELECT * FROM users WHERE id::text = $1 LIMIT 1`, [id]);
@@ -120,6 +152,13 @@ export async function DELETE(
     }
 
     const user = check.rows[0];
+
+    // Isolation check
+    if (authUser && authUser.role !== 'superadmin' && authUser.companyId) {
+      if (user.company_id !== authUser.companyId || user.role === 'superadmin') {
+        return NextResponse.json({ error: 'Access denied: cannot delete this user' }, { status: 403 });
+      }
+    }
 
     // Protection: Prevent deleting primary accounts
     if (user.username === 'superadmin' || user.username === 'carab') {

@@ -5,6 +5,7 @@ import { useToast } from '@/components/Toast';
 import Modal from '@/components/Modal';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 
 interface UserRecord {
   id: string;
@@ -13,6 +14,9 @@ interface UserRecord {
   full_name: string;
   role: 'superadmin' | 'admin' | 'staff';
   is_active: boolean;
+  company_id?: string | null;
+  company_name?: string | null;
+  company_code?: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -27,7 +31,16 @@ interface Stats {
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
+  const { companies } = useCompany();
   const { showToast } = useToast();
+
+  const isSuperAdmin = Boolean(
+    currentUser && (
+      currentUser.role?.toLowerCase()?.trim() === 'superadmin' || 
+      currentUser.username?.toLowerCase()?.trim() === 'superadmin' || 
+      currentUser.username?.toLowerCase()?.trim() === 'carab'
+    )
+  );
 
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [stats, setStats] = useState<Stats>({
@@ -55,7 +68,8 @@ export default function UsersPage() {
     username: '',
     email: '',
     password: '',
-    role: 'admin',
+    role: 'staff',
+    company_id: currentUser?.companyId || '',
     is_active: true,
   });
 
@@ -64,7 +78,8 @@ export default function UsersPage() {
     username: '',
     email: '',
     password: '',
-    role: 'admin',
+    role: 'staff',
+    company_id: '',
     is_active: true,
   });
 
@@ -130,6 +145,7 @@ export default function UsersPage() {
           email: '',
           password: '',
           role: 'admin',
+          company_id: currentUser?.companyId || '',
           is_active: true,
         });
         fetchUsers();
@@ -152,6 +168,7 @@ export default function UsersPage() {
       email: u.email,
       password: '',
       role: u.role,
+      company_id: u.company_id || '',
       is_active: u.is_active,
     });
   };
@@ -170,6 +187,9 @@ export default function UsersPage() {
         role: editForm.role,
         is_active: editForm.is_active,
       };
+      if (isSuperAdmin) {
+        payload.company_id = editForm.company_id || null;
+      }
       if (editForm.password.trim()) {
         payload.password = editForm.password.trim();
       }
@@ -278,14 +298,20 @@ export default function UsersPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-bold text-[#161938] tracking-tight">
-              User Management & Access
+              {isSuperAdmin ? 'User Management & Global Access' : 'School Users & Staff'}
             </h1>
-            <span className="px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
-              Super Admin Area
+            <span className={`px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider ${
+              isSuperAdmin 
+                ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                : 'bg-blue-100 text-blue-800 border border-blue-200'
+            }`}>
+              {isSuperAdmin ? 'Super Admin Control' : 'School Staff Portal'}
             </span>
           </div>
           <p className="text-slate-500 text-sm mt-0.5">
-            Create new administrator accounts, manage system permissions, and control credentials
+            {isSuperAdmin
+              ? 'Manage all system administrators, school staff, and global access credentials'
+              : 'Manage user accounts and staff access for your institution'}
           </p>
         </div>
 
@@ -303,10 +329,11 @@ export default function UsersPage() {
 
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Card 1: Total */}
         <div className="card-base p-5 border-l-4 border-l-[#161938] card-hover">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              TOTAL ACCOUNTS
+              {isSuperAdmin ? 'TOTAL ACCOUNTS' : 'SCHOOL USERS'}
             </span>
             <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-700">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -317,30 +344,42 @@ export default function UsersPage() {
           <div className="text-3xl font-black text-[#161938] tracking-tight">
             {stats.totalUsers}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Active users in the database</p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            {isSuperAdmin ? 'Total active users in system' : 'Users in your school'}
+          </p>
         </div>
 
-        <div className="card-base p-5 border-l-4 border-l-purple-600 card-hover">
+        {/* Card 2: Super Admin or Staff */}
+        <div className={`card-base p-5 border-l-4 ${isSuperAdmin ? 'border-l-purple-600' : 'border-l-amber-500'} card-hover`}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              SUPER ADMINS
+              {isSuperAdmin ? 'SUPER ADMINS' : 'STAFF / CASHIERS'}
             </span>
-            <div className="p-2 rounded-xl bg-purple-50 border border-purple-100 text-purple-700">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 011.397 1.134l-1.2 6A1 1 0 0115.77 13H4.23a1 1 0 01-.98-.861l-1.2-6a1 1 0 011.397-1.134l1.599.8L9 4.323V3a1 1 0 011-1zm-5 13a1 1 0 000 2h10a1 1 0 100-2H5z" clipRule="evenodd" />
-              </svg>
+            <div className={`p-2 rounded-xl ${isSuperAdmin ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-amber-50 text-amber-700 border-amber-100'} border`}>
+              {isSuperAdmin ? (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 011.397 1.134l-1.2 6A1 1 0 0115.77 13H4.23a1 1 0 01-.98-.861l-1.2-6a1 1 0 011.397-1.134l1.599.8L9 4.323V3a1 1 0 011-1zm-5 13a1 1 0 000 2h10a1 1 0 100-2H5z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              )}
             </div>
           </div>
-          <div className="text-3xl font-black text-purple-700 tracking-tight">
-            {stats.superAdmins}
+          <div className={`text-3xl font-black ${isSuperAdmin ? 'text-purple-700' : 'text-amber-600'} tracking-tight`}>
+            {isSuperAdmin ? stats.superAdmins : stats.staffUsers}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Full root access controllers</p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            {isSuperAdmin ? 'Root access controllers' : 'Front desk & cashier staff'}
+          </p>
         </div>
 
+        {/* Card 3: Admins */}
         <div className="card-base p-5 border-l-4 border-l-blue-600 card-hover">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              ADMINISTRATORS
+              {isSuperAdmin ? 'ADMINISTRATORS' : 'SCHOOL ADMINS'}
             </span>
             <div className="p-2 rounded-xl bg-blue-50 border border-blue-100 text-blue-600">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -351,9 +390,12 @@ export default function UsersPage() {
           <div className="text-3xl font-black text-blue-600 tracking-tight">
             {stats.admins}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Standard system operators</p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            {isSuperAdmin ? 'School & branch admins' : 'Administrators in your school'}
+          </p>
         </div>
 
+        {/* Card 4: Active */}
         <div className="card-base p-5 border-l-4 border-l-emerald-500 card-hover">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
@@ -368,7 +410,7 @@ export default function UsersPage() {
           <div className="text-3xl font-black text-emerald-600 tracking-tight">
             {stats.activeUsers}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Accounts with active login</p>
+          <p className="text-[11px] text-slate-400 mt-1">Allowed to sign in</p>
         </div>
       </div>
 
@@ -410,7 +452,7 @@ export default function UsersPage() {
               className="input-field text-xs font-medium"
             >
               <option value="All">All Roles</option>
-              <option value="superadmin">Super Admin</option>
+              {isSuperAdmin && <option value="superadmin">Super Admin</option>}
               <option value="admin">Administrator</option>
               <option value="staff">Staff / Cashier</option>
             </select>
@@ -437,6 +479,7 @@ export default function UsersPage() {
             <thead className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               <tr>
                 <th className="py-3 px-5">User Profile</th>
+                {isSuperAdmin && <th className="py-3 px-5">School / Branch</th>}
                 <th className="py-3 px-5">Email Address</th>
                 <th className="py-3 px-5">Assigned Role</th>
                 <th className="py-3 px-5">Account Status</th>
@@ -447,7 +490,7 @@ export default function UsersPage() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center">
+                  <td colSpan={isSuperAdmin ? 7 : 6} className="py-12 text-center">
                     <div className="spinner mx-auto" />
                     <p className="text-xs text-slate-400 mt-2">Loading user accounts...</p>
                   </td>
@@ -480,6 +523,30 @@ export default function UsersPage() {
                           </div>
                         </div>
                       </td>
+
+                      {/* School / Branch (Super Admin only) */}
+                      {isSuperAdmin && (
+                        <td className="py-3.5 px-5 text-xs">
+                          {u.company_name ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                              <svg className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              </svg>
+                              <span className="truncate max-w-[150px]">{u.company_name}</span>
+                              {u.company_code && (
+                                <span className="text-[10px] bg-blue-100 text-blue-800 px-1 rounded uppercase font-mono">
+                                  {u.company_code}
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                              <span>Global / System</span>
+                            </span>
+                          )}
+                        </td>
+                      )}
 
                       {/* Email */}
                       <td className="py-3.5 px-5 text-xs text-slate-700 font-medium">
@@ -555,7 +622,7 @@ export default function UsersPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={isSuperAdmin ? 7 : 6} className="py-12 text-center text-slate-400 text-sm">
                     No users found matching your search.
                   </td>
                 </tr>
@@ -628,12 +695,49 @@ export default function UsersPage() {
                 className="input-field font-semibold"
                 required
               >
-                <option value="admin">Administrator (Normal Admin)</option>
-                <option value="superadmin">Super Admin (Root Access)</option>
+                <option value="admin">Administrator (School Admin)</option>
+                {isSuperAdmin && <option value="superadmin">Super Admin (Root Access)</option>}
                 <option value="staff">Staff / Cashier (Limited)</option>
               </select>
             </div>
 
+            {isSuperAdmin ? (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">
+                  Assign School / Institution
+                </label>
+                <select
+                  value={addForm.company_id}
+                  onChange={(e) => setAddForm({ ...addForm, company_id: e.target.value })}
+                  className="input-field font-medium"
+                >
+                  <option value="">Global / System (No School)</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">
+                  Initial Password * (min 6 chars)
+                </label>
+                <input
+                  type="password"
+                  value={addForm.password}
+                  onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                  className="input-field"
+                />
+              </div>
+            )}
+          </div>
+
+          {isSuperAdmin && (
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">
                 Initial Password * (min 6 chars)
@@ -648,7 +752,7 @@ export default function UsersPage() {
                 className="input-field"
               />
             </div>
-          </div>
+          )}
 
           <div className="pt-2">
             <label className="inline-flex items-center gap-2 cursor-pointer">
@@ -751,12 +855,48 @@ export default function UsersPage() {
                   className="input-field font-semibold"
                   required
                 >
-                  <option value="admin">Administrator (Normal Admin)</option>
-                  <option value="superadmin">Super Admin (Root Access)</option>
+                  <option value="admin">Administrator (School Admin)</option>
+                  {isSuperAdmin && <option value="superadmin">Super Admin (Root Access)</option>}
                   <option value="staff">Staff / Cashier</option>
                 </select>
               </div>
 
+              {isSuperAdmin ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">
+                    Assigned School / Institution
+                  </label>
+                  <select
+                    value={editForm.company_id}
+                    onChange={(e) => setEditForm({ ...editForm, company_id: e.target.value })}
+                    className="input-field font-medium"
+                  >
+                    <option value="">Global / System (No School)</option>
+                    {companies.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">
+                    Reset Password (Leave blank to keep)
+                  </label>
+                  <input
+                    type="password"
+                    value={editForm.password}
+                    onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                    placeholder="New password (optional)"
+                    minLength={6}
+                    className="input-field"
+                  />
+                </div>
+              )}
+            </div>
+
+            {isSuperAdmin && (
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">
                   Reset Password (Leave blank to keep)
@@ -770,7 +910,7 @@ export default function UsersPage() {
                   className="input-field"
                 />
               </div>
-            </div>
+            )}
 
             <div className="pt-2">
               <label className="inline-flex items-center gap-2 cursor-pointer">
