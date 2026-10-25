@@ -5,7 +5,7 @@ import ws from 'ws';
 neonConfig.webSocketConstructor = ws;
 
 const FALLBACK_DATABASE_URL =
-  'postgresql://neondb_owner:npg_iabStVkHd71T@ep-blue-sunset-b5mp00gl-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require';
+  'postgresql://neondb_owner:npg_iF4cqv6kOnJt@ep-wispy-silence-b4twibe9-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
 
 let globalPool: Pool | null = null;
 
