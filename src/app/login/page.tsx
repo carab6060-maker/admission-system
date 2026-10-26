@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 
 export default function LoginPage() {
-  const [usernameOrEmail, setUsernameOrEmail] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [usernameOrEmail, setUsernameOrEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -68,7 +68,7 @@ export default function LoginPage() {
               value={usernameOrEmail}
               onChange={(e) => setUsernameOrEmail(e.target.value)}
               required
-              placeholder="e.g. admin or carab"
+              placeholder="Enter your username or email"
               className="input-field"
             />
           </div>
@@ -117,13 +117,6 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
-
-        {/* Credentials Note */}
-        <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-          <p className="text-xs text-slate-500">
-            Database accounts: <span className="font-semibold text-slate-700">admin</span> or <span className="font-semibold text-slate-700">carab</span> (password: <span className="font-semibold text-slate-700">admin123</span>)
-          </p>
-        </div>
       </div>
     </div>
   );
