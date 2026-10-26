@@ -190,32 +190,76 @@ export async function POST(request: NextRequest) {
       companyId = compRes.rows[0]?.id || null;
     }
 
-    // Generate unique sequential receipt number e.g. RCP-2026-0007
-    const countRes = await query(`SELECT COUNT(*) as count FROM payments`);
-    const nextNum = parseInt(countRes.rows[0].count, 10) + 1;
+    // Generate unique sequential receipt number e.g. RCP-2026-0003
     const year = new Date().getFullYear();
-    const receiptNo = `RCP-${year}-${String(nextNum).padStart(4, '0')}`;
-
-    const insertRes = await query(
-      `INSERT INTO payments (
-        receipt_no, student_id, company_id, amount, fee_type, payment_method,
-        payment_date, reference_no, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *`,
-      [
-        receiptNo,
-        studentId,
-        companyId,
-        amount,
-        feeType,
-        paymentMethod,
-        paymentDate,
-        referenceNo,
-        notes,
-      ]
+    const existingReceipts = await query(
+      `SELECT receipt_no FROM payments WHERE receipt_no LIKE $1`,
+      [`RCP-${year}-%`]
     );
 
-    const newPayment = insertRes.rows[0];
+    let maxNum = 0;
+    for (const row of existingReceipts.rows) {
+      const match = (row.receipt_no || '').match(/^RCP-\d+-(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+    }
+
+    let nextNum = maxNum + 1;
+    let receiptNo = `RCP-${year}-${String(nextNum).padStart(4, '0')}`;
+
+    // Ensure it doesn't collide with any existing receipt in the database
+    while (true) {
+      const existsCheck = await query(`SELECT 1 FROM payments WHERE receipt_no = $1 LIMIT 1`, [receiptNo]);
+      if (existsCheck.rows.length === 0) {
+        break;
+      }
+      nextNum++;
+      receiptNo = `RCP-${year}-${String(nextNum).padStart(4, '0')}`;
+    }
+
+    let newPayment: any = null;
+    let attempts = 0;
+
+    while (attempts < 5) {
+      try {
+        const insertRes = await query(
+          `INSERT INTO payments (
+            receipt_no, student_id, company_id, amount, fee_type, payment_method,
+            payment_date, reference_no, notes
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          RETURNING *`,
+          [
+            receiptNo,
+            studentId,
+            companyId,
+            amount,
+            feeType,
+            paymentMethod,
+            paymentDate,
+            referenceNo,
+            notes,
+          ]
+        );
+        newPayment = insertRes.rows[0];
+        break;
+      } catch (insertErr: any) {
+        if (insertErr.code === '23505' && (insertErr.constraint === 'payments_receipt_no_key' || insertErr.message?.includes('payments_receipt_no_key'))) {
+          attempts++;
+          nextNum++;
+          receiptNo = `RCP-${year}-${String(nextNum).padStart(4, '0')}`;
+        } else {
+          throw insertErr;
+        }
+      }
+    }
+
+    if (!newPayment) {
+      return NextResponse.json({ error: 'Failed to generate a unique receipt number. Please try again.' }, { status: 500 });
+    }
 
     // Return with joined student and company info
     const fullRes = await query(
